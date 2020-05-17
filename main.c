@@ -16,6 +16,43 @@ void GoToXY(const int X,const int Y)
     SetConsoleCursorPosition(OutPutHandle,ScreenBufInfo.dwCursorPosition);
 }
 
+//функция отрисовки окошка с информацией о полётах
+void Flights_info_drawer()
+{   
+    for(int i=0; i<84; i++)
+    {
+        GoToXY(178,i);
+        printf("|");
+    }
+    GoToXY(190,8);
+    printf("Interstellar flights information");
+}
+
+//функция отрисовки кораблей
+void Spaceships_drawer(int X, int Y)
+{
+    const char body[5][5] = { "#####",
+                              "#   #",
+                              "#   #",
+                              "#   #",
+                              "#####"};
+    for(int i=0; i<5; i++)
+    {
+        for(int j=0; j<5; j++)
+        {   
+            GoToXY(X+i,Y+j);
+            printf("%c", body[i][j]);        
+        }
+    }
+}
+
+//TODO: генерация человечков на станциях
+void All_pasengers()
+{
+
+}
+
+//функция отрисовки станций
 void Planetary_stations_drawer(int X, int Y)
 {
     int station_width = 15;
@@ -48,32 +85,39 @@ void Planetary_stations_drawer(int X, int Y)
     } 
 }
 
+//сами станции (здесь собирается изначальное состояние мира)
 void Planetary_stations()
 {
     //Станция "Альдебаран"
     GoToXY(5,5); //передвигаем курсор в нужное место
     printf("Aldebaran"); //название станции
-    Planetary_stations_drawer(5,8);
+    Planetary_stations_drawer(5,8); //рисуем станцию
+    Spaceships_drawer(22,12); //рисуем корабль
 
     //Станция "Вега"
     GoToXY(130,5); //передвигаем курсор в нужное место
     printf("Vega"); //название станции
     Planetary_stations_drawer(130,8);
+    Spaceships_drawer(124,12);
 
     //Станция "Земля"
     GoToXY(5,50); //передвигаем курсор в нужное место
     printf("The Earth"); //название станции
     Planetary_stations_drawer(5,53);
+    Spaceships_drawer(22,57);
 
     //Станция "Сириус"
     GoToXY(130,50); //передвигаем курсор в нужное место
     printf("Sirius"); //название станции
     Planetary_stations_drawer(130,53);
+    Spaceships_drawer(124,57);
 }
 
 void main()
 {
     system("cls");
     Planetary_stations();
+    Flights_info_drawer();
     getchar();
 }
+
