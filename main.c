@@ -47,15 +47,22 @@ void Spaceships_drawer(int X, int Y)
 }
 
 //TODO: генерация человечков на станциях
-void All_pasengers()
+void Passengers(int X, int Y)
 {
-
+    LARGE_INTEGER tt;
+    QueryPerformanceCounter(&tt);
+    srand(tt.LowPart); 
+    int min = 3, max = 30; 
+    int diff = max-min;
+    int passengerAmount = rand()%diff;
+    GoToXY(X,Y);
+    printf("Flight app: %d", passengerAmount); //выводим количество заявок на перелёты с этой станции
 }
 
 //функция отрисовки станций
 void Planetary_stations_drawer(int X, int Y)
 {
-    int station_width = 15;
+    int station_width = 18;
     char brick = "*"; //из какого символа будут отрисовываться станции
     int i=0,j=0;
     
@@ -92,25 +99,32 @@ void Planetary_stations()
     GoToXY(5,5); //передвигаем курсор в нужное место
     printf("Aldebaran"); //название станции
     Planetary_stations_drawer(5,8); //рисуем станцию
-    Spaceships_drawer(22,12); //рисуем корабль
-
+    Passengers(8,9);
+    Spaceships_drawer(25,12); //рисуем корабль
+    
     //Станция "Вега"
     GoToXY(130,5); //передвигаем курсор в нужное место
     printf("Vega"); //название станции
     Planetary_stations_drawer(130,8);
+    Passengers(133,9);
     Spaceships_drawer(124,12);
+    
 
     //Станция "Земля"
     GoToXY(5,50); //передвигаем курсор в нужное место
     printf("The Earth"); //название станции
     Planetary_stations_drawer(5,53);
-    Spaceships_drawer(22,57);
+    Passengers(8,54);
+    Spaceships_drawer(25,57);
+    
 
     //Станция "Сириус"
     GoToXY(130,50); //передвигаем курсор в нужное место
     printf("Sirius"); //название станции
     Planetary_stations_drawer(130,53);
+    Passengers(133,54);
     Spaceships_drawer(124,57);
+    
 }
 
 void main()
