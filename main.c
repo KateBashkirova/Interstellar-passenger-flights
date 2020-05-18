@@ -4,6 +4,16 @@
 #include <Windows.h>
 #include <process.h>
 
+//количество общих заявок на перелёты на каждой станции (т.е. )
+int AldebaranPassengers = 0,
+    VegaPassengers = 0,
+    TheEarthPassengers = 0,
+    SiriusPassengers = 0;
+//массив массивов. Здесь в зависимости от номера станции [4] хранятся ячейки-места (второе [4]), кужа будут распределяться пассажиры
+//4 станции, на каждой по 3 возможных варианта полёта (1 не считается, потому что на какой-то пассажиры уже находятся)
+int StationFlightsApp[4][4] = {{0,0,0,0}, {0,0,0,0}, {0,0,0,0}, {0,0,0,0}};
+
+
 //Функция, отвечающая за перемещение курсора по экрану и вовода текста в нужное место
 void GoToXY(const int X,const int Y)
 {
@@ -16,16 +26,25 @@ void GoToXY(const int X,const int Y)
     SetConsoleCursorPosition(OutPutHandle,ScreenBufInfo.dwCursorPosition);
 }
 
-//функция отрисовки окошка с информацией о полётах
-void Flights_info_drawer()
-{   
-    for(int i=0; i<84; i++)
-    {
-        GoToXY(178,i);
-        printf("|");
-    }
-    GoToXY(190,8);
-    printf("Interstellar flights information");
+int Random_number_generator(int min, int max)
+{
+    LARGE_INTEGER tt;
+    QueryPerformanceCounter(&tt);
+    srand(tt.LowPart); 
+    double fraction = 1.0 / ((double)(RAND_MAX) + 1.0); 
+    // Равномерно распределяем рандомное число в нашем диапазоне min/max
+    int randomNumber = (int)(rand() * fraction * (max - min + 1) + min);
+    return randomNumber;
+}
+
+//информация о заявках на полёты
+void Flights_applications(int passengerAmount, int departureStationNumber)
+{
+    
+    
+
+    int quantitativeApplications[4]; //здесь будет хранится какое кол-во человек летит на какую станцию
+    
 }
 
 //функция отрисовки кораблей
@@ -46,17 +65,65 @@ void Spaceships_drawer(int X, int Y)
     }
 }
 
-//TODO: генерация человечков на станциях
-void Passengers(int X, int Y)
+void Passengers(int X, int Y, int departureStationNumber, int y)
 {
-    LARGE_INTEGER tt;
-    QueryPerformanceCounter(&tt);
-    srand(tt.LowPart); 
-    int min = 3, max = 30; 
-    int diff = max-min;
-    int passengerAmount = rand()%diff;
-    GoToXY(X,Y);
-    printf("Flight app: %d", passengerAmount); //выводим количество заявок на перелёты с этой станции
+    char *departureStationName; //указатель на строку с названием станции, с которой совершается отлёт
+    departureStationName = (char*)malloc(15); //выделение памяти под хранение этой строки
+    switch(departureStationNumber) //в зависимости от номера станции отправления
+    {
+        case 0:
+        departureStationName = "Aldebaran";
+        break;
+        case 1:
+        departureStationName = "Vega";
+        break;
+        case 2:
+        departureStationName = "The Earth";
+        break;
+        case 3:
+        departureStationName = "Sirius";
+        break;
+        default:
+        departureStationName = "Error";
+        break;
+    }
+
+    int passengerAmount = 0;
+    //делим пассажиров по станциям
+    for(int j=0; j<4; j++)
+    {
+        //если заполняется колонка пассажиров для станции, на которой эти пассажиры находятся в данный момент
+        if(j==departureStationNumber) 
+        {
+            StationFlightsApp[departureStationNumber][j] = 0; //пассажиры не могут поехать на ту же станцию, на которой уже находятся
+        }
+        else 
+        {
+            int passengers = Random_number_generator(5,12); //генерируем рандомное кол-во пассажиров на станции
+            StationFlightsApp[departureStationNumber][j] = passengers; //делим пассажиров, причисляем кол-во к каждой станции
+            passengerAmount += passengers;
+            GoToXY(X,Y);
+            printf("Flight app: %d", passengerAmount); //выводим кол-во пассажиров на станции в окошко станции
+        }
+    }
+    
+    for(int i=0; i<84; i++)
+    {
+        GoToXY(178,i);
+        printf("|");
+    }
+
+    GoToXY(190,4);
+    printf("Interstellar flights information");
+ 
+    GoToXY(190,y);
+    printf("From %s to Aldebaran: %d", departureStationName, StationFlightsApp[departureStationNumber][0]);
+    GoToXY(190,y+1);
+    printf("From %s to Vega: %d", departureStationName, StationFlightsApp[departureStationNumber][1]);
+    GoToXY(190,y+2);
+    printf("From %s to The Earth: %d", departureStationName, StationFlightsApp[departureStationNumber][2]);
+    GoToXY(190,y+3);
+    printf("From %s to Sirius: %d", departureStationName, StationFlightsApp[departureStationNumber][3]);
 }
 
 //функция отрисовки станций
@@ -99,39 +166,35 @@ void Planetary_stations()
     GoToXY(5,5); //передвигаем курсор в нужное место
     printf("Aldebaran"); //название станции
     Planetary_stations_drawer(5,8); //рисуем станцию
-    Passengers(8,9);
+    Passengers(8,9,0,7);
     Spaceships_drawer(25,12); //рисуем корабль
     
     //Станция "Вега"
     GoToXY(130,5); //передвигаем курсор в нужное место
     printf("Vega"); //название станции
     Planetary_stations_drawer(130,8);
-    Passengers(133,9);
+    Passengers(133,9,1,14);
     Spaceships_drawer(124,12);
-    
 
     //Станция "Земля"
     GoToXY(5,50); //передвигаем курсор в нужное место
     printf("The Earth"); //название станции
     Planetary_stations_drawer(5,53);
-    Passengers(8,54);
+    Passengers(8,54,2,21);
     Spaceships_drawer(25,57);
-    
 
     //Станция "Сириус"
     GoToXY(130,50); //передвигаем курсор в нужное место
     printf("Sirius"); //название станции
     Planetary_stations_drawer(130,53);
-    Passengers(133,54);
+    Passengers(133,54,3,28);
     Spaceships_drawer(124,57);
-    
 }
 
 void main()
 {
     system("cls");
     Planetary_stations();
-    Flights_info_drawer();
     getchar();
 }
 
