@@ -37,16 +37,6 @@ int Random_number_generator(int min, int max)
     return randomNumber;
 }
 
-//информация о заявках на полёты
-void Flights_applications(int passengerAmount, int departureStationNumber)
-{
-    
-    
-
-    int quantitativeApplications[4]; //здесь будет хранится какое кол-во человек летит на какую станцию
-    
-}
-
 //функция отрисовки кораблей
 void Spaceships_drawer(int X, int Y)
 {
@@ -65,6 +55,7 @@ void Spaceships_drawer(int X, int Y)
     }
 }
 
+//функция генерации пассажиров на станциях + распределение пассажиров по направлениям полётов
 void Passengers(int X, int Y, int departureStationNumber, int y)
 {
     char *departureStationName; //указатель на строку с названием станции, с которой совершается отлёт
@@ -88,6 +79,7 @@ void Passengers(int X, int Y, int departureStationNumber, int y)
         break;
     }
 
+    //общее количество пассажиров на станции 
     int passengerAmount = 0;
     //делим пассажиров по станциям
     for(int j=0; j<4; j++)
@@ -99,23 +91,24 @@ void Passengers(int X, int Y, int departureStationNumber, int y)
         }
         else 
         {
-            int passengers = Random_number_generator(5,12); //генерируем рандомное кол-во пассажиров на станции
-            StationFlightsApp[departureStationNumber][j] = passengers; //делим пассажиров, причисляем кол-во к каждой станции
-            passengerAmount += passengers;
+            int passengers = Random_number_generator(5,12); //генерируем рандомное кол-во пассажиров, которые куда-то поедут
+            StationFlightsApp[departureStationNumber][j] = passengers; //записываем этих пассажиров как желающих поехать на станцию j
+            passengerAmount += passengers; //считаем общее кол-во пассажиров
             GoToXY(X,Y);
             printf("Flight app: %d", passengerAmount); //выводим кол-во пассажиров на станции в окошко станции
         }
     }
     
+    //просто линия для очерчивания окошка
     for(int i=0; i<84; i++)
     {
         GoToXY(178,i);
         printf("|");
     }
 
+    //выводим информацию о перелётах в окошко
     GoToXY(190,4);
     printf("Interstellar flights information");
- 
     GoToXY(190,y);
     printf("From %s to Aldebaran: %d", departureStationName, StationFlightsApp[departureStationNumber][0]);
     GoToXY(190,y+1);
