@@ -110,10 +110,10 @@ void Spaceships_drawer(int X, int Y, int action)
 
 //TODO: исправить то, что корабль оставляет за собой след, несмотря на вызывающуюся функцию очистки
 //функция отрисовки движения кораблей
-void SpaceshipMovementDrawer(int depatrureStationCoordX, int departureStationCoordY, int arrivalStationCoordX, int arrivalStationCoordY)
+void SpaceshipMovementDrawer(int departureStationCoordX, int departureStationCoordY, int arrivalStationCoordX, int arrivalStationCoordY)
 {
     //если станции находятся на одном уровне по Х
-    if(depatrureStationCoordX == arrivalStationCoordX)
+    if(departureStationCoordX == arrivalStationCoordX)
     {
         //проверим, находится станция отбытия выше или ниже станции прибытия
         if(departureStationCoordY > arrivalStationCoordY)
@@ -124,10 +124,10 @@ void SpaceshipMovementDrawer(int depatrureStationCoordX, int departureStationCoo
                 //будут проводится манипуляции с Y
                 int Y = departureStationCoordY;
                 //двигаемся - стираем кораблик в старой точке
-                Spaceships_drawer(depatrureStationCoordX, Y, 0);
+                Spaceships_drawer(departureStationCoordX, Y, 0);
                 Y = Y-i;
                 //двигаемся - рисуем новый кораблик в новой точке
-                Spaceships_drawer(depatrureStationCoordX, Y, 1);
+                Spaceships_drawer(departureStationCoordX, Y, 1);
             }
         } 
         else
@@ -138,25 +138,24 @@ void SpaceshipMovementDrawer(int depatrureStationCoordX, int departureStationCoo
                 //будут проводится манипуляции с Y
                 int Y = departureStationCoordY;
                 //двигаемся - стираем кораблик в старой точке
-                Spaceships_drawer(depatrureStationCoordX, Y, 0);
+                Spaceships_drawer(departureStationCoordX, Y, 0);
                 Y = Y+i;
                 //двигаемся - рисуем новый кораблик в новой точке
-                Spaceships_drawer(depatrureStationCoordX, Y, 1);
+                Spaceships_drawer(departureStationCoordX, Y, 1);
             }
         }
-        successfulArrival = 1;
     }
 
     if(departureStationCoordY == arrivalStationCoordY)
     {
         //проверим, находится станция отбытия правее или левее станции прибытия
-        if(depatrureStationCoordX > arrivalStationCoordX)
+        if(departureStationCoordX > arrivalStationCoordX)
         {
             //пока координаты не совпадут
-            for(int i = depatrureStationCoordX; i < arrivalStationCoordX; i++)
+            for(int i = departureStationCoordX; i < arrivalStationCoordX; i++)
             {
                 //будут проводится манипуляции с X
-                int X = depatrureStationCoordX;
+                int X = departureStationCoordX;
                 //двигаемся - стираем кораблик в старой точке
                 Spaceships_drawer(X, departureStationCoordY, 0);
                 X = X-i;
@@ -167,10 +166,10 @@ void SpaceshipMovementDrawer(int depatrureStationCoordX, int departureStationCoo
         else
         {
             //пока координаты не совпадут
-            for(int i = depatrureStationCoordX; i < arrivalStationCoordX; i++)
+            for(int i = departureStationCoordX; i < arrivalStationCoordX; i++)
             {
                 //будут проводится манипуляции с X
-                int X = depatrureStationCoordX;
+                int X = departureStationCoordX;
                 //двигаемся - стираем кораблик в старой точке
                 Spaceships_drawer(X, departureStationCoordY, 0);
                 X = X+i;
@@ -178,7 +177,6 @@ void SpaceshipMovementDrawer(int depatrureStationCoordX, int departureStationCoo
                 Spaceships_drawer(X, departureStationCoordY, 1);
             }
         }
-        successfulArrival = 1;
     }
 
     //TODO: внештатные ситуации
@@ -186,21 +184,21 @@ void SpaceshipMovementDrawer(int depatrureStationCoordX, int departureStationCoo
     //проверяем, на какой из станций внештатных ситуаций мы находимся
 
     //маршрут Альдебаран - Сириус
-    if((depatrureStationCoordX == 25 && departureStationCoordY == 12 && arrivalStationCoordX == 124 && arrivalStationCoordY == 57) || 
-       (depatrureStationCoordX == 124 && departureStationCoordY == 57 && arrivalStationCoordX == 25 && arrivalStationCoordY == 12)) 
+    if((departureStationCoordX == 25 && departureStationCoordY == 12 && arrivalStationCoordX == 124 && arrivalStationCoordY == 57) || 
+       (departureStationCoordX == 124 && departureStationCoordY == 57 && arrivalStationCoordX == 25 && arrivalStationCoordY == 12)) 
     {
         //пока координаты не совпадут
-        for(int i = depatrureStationCoordX; i < arrivalStationCoordX; i++)
+        for(int i = departureStationCoordX; i < arrivalStationCoordX; i++)
         {
             for(int j=departureStationCoordY; j<arrivalStationCoordY; j++)
             {
                 //будут проводится манипуляции с X
-                int X = depatrureStationCoordX;
+                int X = departureStationCoordX;
                 //будут проводится манипуляции с Y
                 int Y = departureStationCoordY;
                 //двигаемся - стираем кораблик в старой точке
                 Spaceships_drawer(X, Y, 0);
-                if(depatrureStationCoordX == 25)
+                if(departureStationCoordX == 25)
                 {
                     X = X+i;
                     Y = Y+j;
@@ -214,18 +212,17 @@ void SpaceshipMovementDrawer(int depatrureStationCoordX, int departureStationCoo
                 Spaceships_drawer(X, Y, 1);
             }    
         }
-        successfulArrival = 1;
     }
 
     //маршрут Вега - Земля
-    if((depatrureStationCoordX == 124 && departureStationCoordY == 12 && arrivalStationCoordX == 25 && arrivalStationCoordY == 57) || 
-       (depatrureStationCoordX == 25 && departureStationCoordY == 57 && arrivalStationCoordX == 124 && arrivalStationCoordY == 12)) 
+    if((departureStationCoordX == 124 && departureStationCoordY == 12 && arrivalStationCoordX == 25 && arrivalStationCoordY == 57) || 
+       (departureStationCoordX == 25 && departureStationCoordY == 57 && arrivalStationCoordX == 124 && arrivalStationCoordY == 12)) 
     {
         //пока координаты не совпадут
-        for(int i = depatrureStationCoordX; i < arrivalStationCoordX; i++)
+        for(int i = departureStationCoordX; i < arrivalStationCoordX; i++)
         {
             //будут проводится манипуляции с X
-            int X = depatrureStationCoordX;
+            int X = departureStationCoordX;
             //будут проводится манипуляции с Y
             int Y = departureStationCoordY;
 
@@ -274,55 +271,52 @@ void SpaceshipMovementDrawer(int depatrureStationCoordX, int departureStationCoo
                 }
             }  
         }
-        successfulArrival = 1;
-    } 
+    }
 }
 
-//TODO: вызвать сам полёт
+//FIXME: не отнимается кол-во человек, когда корабль долетел до первой точки назначения, поэтому он и не двигается!
 void SpaceshipMovementLogic(int *shipRoute, int departureStationNumber)
 {
-    //устанавливаем координаты начала движения в зависимости от номера станции отправления
-    int currentCoord[2];
-    currentCoord[0] = StationCOORD[departureStationNumber][0]; //X
-    currentCoord[1] = StationCOORD[departureStationNumber][1]; //Y
+    int currentStation[2];
+    currentStation[0] = StationCOORD[departureStationNumber][0]; //X
+    currentStation[1] = StationCOORD[departureStationNumber][1]; //Y
 
-    //координаты станции прибытия
-    int destinationCoord[2];
-
+    int i=0;
     //обрабатываем пришедший массив с курсом движения корабля
-    for(int i=0; i<4; i++)
+    while(i<4)
     {
         //если на направлении есть пассажиры
         if(shipRoute[i] != 0)
         {
+            //вызываем функцию перелёта из станции по текущим координатам на станцию прибытия
+            SpaceshipMovementDrawer(currentStation[0], currentStation[1], StationCOORD[i][0], StationCOORD[i][1]);
+            currentStation[0] = StationCOORD[i][0];
+            currentStation[1] = StationCOORD[i][1];
+            GoToXY(StationCOORD[i][0], StationCOORD[i][1]);
+            printf("Pass arrived: %d", shipRoute[i]);
+            shipRoute[i] = 0; //высаживаем пассажиров на станции
             //записываем координаты станции, на которую нужно попасть
-            GoToXY(190,75);
+            GoToXY(190,45);
             printf("Arrival station coodrs: %d %d", StationCOORD[i][0], StationCOORD[i][1]);
+            GoToXY(190,46);
+            printf("New dep station coodrs: %d %d", currentStation[0], currentStation[1]);
         }
-        //отладка
-        GoToXY(190,74);
-        printf("Current station coodrs: %d %d", currentCoord[0], currentCoord[1]);
-        
-        for(int c=0; c<4; c++)
-        {
-            GoToXY(190,76+c);
-            printf("shipRoute array: %d", shipRoute[c]);
-        }
-        
+        i++;      
     }
     //TODO: возврат обратно в станцию отправления
+    SpaceshipMovementDrawer(currentStation[0], currentStation[1], StationCOORD[departureStationNumber][0], StationCOORD[departureStationNumber][1]);
 }
 
-
-void Spaceship(int currentStation)
+void Spaceship(int currentStation, int originalStation)
 {
     int seats = 4;
     int passengers=0;
     //логика точно такая же, как и у станций, только здесь вместо станций - корабли.
     //т.е. корабль, у него 4 места. Каждая ячейка отвечает за свою станцию, содержимое ячейки - на количество пассажиров В КОРАБЛЕ, желающих поехать на эту станцию
     int shipWorkload[4] = {0,0,0,0}; //загруженность салона корабля
+    int i=0;
     //ищет, хочет ли кто-то полететь с текущей станции хоть куда-нибудь
-    for(int i=0; i<4; i++)
+    for(i=0; i<4; i++)
     {
         //если ещё не всех пассажиров развезли - этот цикл нужен для самого последнего развоза
         if(StationFlightsApp[currentStation][i] != 0)
@@ -330,23 +324,12 @@ void Spaceship(int currentStation)
             //проверяем, остались ли места в салоне. If вместо while для тех моментов, когда, например, остался всего 1 пассажир. Он займёт 1 место, 3 останется, но корабль должен полететь, потому что никого больше нет
             if(seats > 0)
             {
-                //садим пассажиров. В общем получится не большее 4-х, даже если на это направление хочет больше людей - поедут в следующий раз
-                for(int k=0; k<4; k++)
-                {
-                    passengers += (StationFlightsApp[currentStation][i]/StationFlightsApp[currentStation][i]); //садим РОВНО 1 пассажира
-                    seats -= passengers; //пассажиры занимают места
-                    StationFlightsApp[currentStation][i] --; //севшие на корабль пассажиры больше не считаются пассажирами, ожидающими перелёт
-                    shipWorkload[i] += 1; //записываем, что этот пассажир сел в корабль на направление i
-                }
+                passengers += (StationFlightsApp[currentStation][i]/StationFlightsApp[currentStation][i]); //садим РОВНО 1 пассажира
+                seats -= passengers; //пассажиры занимают места
+                StationFlightsApp[currentStation][i] -= (StationFlightsApp[currentStation][i]/StationFlightsApp[currentStation][i]); //севшие на корабль пассажиры больше не считаются пассажирами, ожидающими перелёт
+                shipWorkload[i] += (StationFlightsApp[currentStation][i]/StationFlightsApp[currentStation][i]); //записываем, что этот пассажир сел в корабль на направление i
             }
         }
-        
-        //если развезли всех пассажиров со станции, и больше никто никуда ехать не хочет - корабль возвращается в доки своей станции
-       /* else
-        {
-            //TODO:возврат в доки своей станции
-        }*/
-        
     }
     //отладка
     GoToXY(190, 70);
@@ -356,20 +339,19 @@ void Spaceship(int currentStation)
         GoToXY(190, 60+c);
         printf("Route: %d", shipWorkload[c]);
     }
-    
+
     //полетели
     int *shipRoute = shipWorkload;
     SpaceshipMovementLogic(shipRoute, currentStation);
 
-    //отладка
-    GoToXY(190,40);
-    printf("SFA aldebaran: %d", StationFlightsApp[0][0]);
-    GoToXY(190,41);
-    printf("SFA aldebaran: %d",StationFlightsApp[0][1]);
-     GoToXY(190,42);
-      printf("SFA aldebaran: %d",StationFlightsApp[0][2]);
-      GoToXY(190,43);
-      printf("SFA aldebaran: %d",StationFlightsApp[0][3]);
+    
+    for(int v=0; v<4; v++)
+    {
+        GoToXY(190,75+v);
+        printf("SFA spaceship: %d", StationFlightsApp[currentStation][v]);
+    }
+    //если развезли всех пассажиров со станции, и больше никто никуда ехать не хочет - корабль возвращается в доки своей станции
+    SpaceshipMovementDrawer(StationCOORD[currentStation][0], StationCOORD[currentStation][1], StationCOORD[originalStation][0], StationCOORD[originalStation][1]);
 }
 
 
@@ -411,7 +393,7 @@ void Passengers(int X, int Y, int departureStationNumber, int y)
         }
         else 
         {
-            int passengers = Random_number_generator(4,12); //генерируем рандомное кол-во пассажиров, которые куда-то поедут
+            int passengers = Random_number_generator(1,2); //генерируем рандомное кол-во пассажиров, которые куда-то поедут
             StationFlightsApp[departureStationNumber][j] = passengers; //записываем этих пассажиров как желающих поехать на станцию j
             passengerAmount += passengers; //считаем общее кол-во пассажиров
             GoToXY(X,Y);
@@ -448,7 +430,7 @@ void Passengers(int X, int Y, int departureStationNumber, int y)
 
 void SpaceshipsCalling(int station)
 {
-    Spaceship(station);
+    Spaceship(station, station);
 }
 
 //сами станции (здесь собирается изначальное состояние мира)
