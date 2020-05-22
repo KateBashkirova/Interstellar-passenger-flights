@@ -4,28 +4,20 @@
 #include <Windows.h>
 #include <process.h>
 
-//количество общих заявок на перелёты на каждой станции (т.е. )
-int AldebaranPassengers = 0,
-    VegaPassengers = 0,
-    TheEarthPassengers = 0,
-    SiriusPassengers = 0;
-
+//массив, в котором хранится количество пассажиров, прибывших на каждую станцию. Номер ячейки = номеру станции. Значение ячейки = количеству прибывших на эту станцию пассажиров
 int ArrivedPassengers[4] = {0,0,0,0};
-//массив массивов. Здесь в зависимости от номера станции [4] хранятся ячейки-места (второе [4]), кужа будут распределяться пассажиры
-//4 станции, на каждой по 3 возможных варианта полёта (1 не считается, потому что на какой-то пассажиры уже находятся)
-int StationFlightsApp[4][4] = {{0,0,0,0}, {0,0,0,0}, {0,0,0,0}, {0,0,0,0}};
 
+//массив массивов. Используется при генерации заявок на полёты. Номер {} ячейки = номеру станции, для которой происходит генерация заявок. 
+//Номер ячейки внутри большой ячейки {} = номеру станции, на которую полетят люди со станции в большой ячейке {}. 
+//Значение ячейки = количество пассажиров, которые полетят со станции {} на станцию.
+int StationFlightsApp[4][4] = {{0,0,0,0}, {0,0,0,0}, {0,0,0,0}, {0,0,0,0}};
 //координаты доков каждой станции
 int StationCOORD[4][2] = {{25,12}, {128,12}, {25,57}, {128,57}};
-
-int RouteComplieted = 0;
-
-int SpaceshipOneCurrentStation = 0,
-    SpaceshipTwoCurrentStation = 1,
-    SpaceshipThreeCurrentStation = 2,
-    SpaceshipFourCurrentStation = 4;
-
+//Общее кол-во пассажиров на всех станциях
 int passengerAmount = 0;
+//хэндлы
+HANDLE hship0,hship1,hship2,hship3;
+DWORD shipThreadID0,shipThreadID1,shipThreadID2,shipThreadID3; //id нитей
 
 //Добавочные функции
 //Функция, отвечающая за перемещение курсора по экрану и вовода текста в нужное место
@@ -85,7 +77,7 @@ void Planetary_stations_drawer(int X, int Y)
     } 
 }
 
-//функция отрисовки кораблей
+//функция начальной отрисовки кораблей в доках своих станций
 void Spaceships_drawer(int X, int Y)
 {
     char *body = "S";
@@ -94,10 +86,10 @@ void Spaceships_drawer(int X, int Y)
     printf("%s", body);      
 }
 
-//FIXME: маршрут Альдебаран - Сириус
 //функция отрисовки движения кораблей
 void SpaceshipMovementDrawer(int departureStationCoordX, int departureStationCoordY, int arrivalStationCoordX, int arrivalStationCoordY)
-{
+{   
+    //отладка
     GoToXY(190, 35);
     printf("SMD dep X: %d", departureStationCoordX);
     GoToXY(190, 36);
@@ -106,9 +98,12 @@ void SpaceshipMovementDrawer(int departureStationCoordX, int departureStationCoo
     printf("SMD arr X: %d", arrivalStationCoordX);
     GoToXY(190, 38);
     printf("SMD arr Y: %d", arrivalStationCoordY);
+
+    //тело корабля
     char *body = "S";
     char *bodyDeliter = " ";
 
+    //далее идёт проверка условий для перемещения корабля по пространству
     //если станции находятся на одном уровне по Y
     if(departureStationCoordY == arrivalStationCoordY)
     {
@@ -118,11 +113,16 @@ void SpaceshipMovementDrawer(int departureStationCoordX, int departureStationCoo
             //пока координаты не совпадут
             for(int i = departureStationCoordX; i<arrivalStationCoordX; i++)
             {
+                //перемещаемся в нужную точку
                 GoToXY(departureStationCoordX, departureStationCoordY);
+                //стираем то, что в ней было
                 printf("%s", bodyDeliter);
                 departureStationCoordX++;
+                //перемещаемся дальше
                 GoToXY(departureStationCoordX, departureStationCoordY);
+                //рисуем тело корабля
                 printf("%s", body);
+                //задержка для создания эффекта "движения"
                 Sleep(10);
             }  
         }
@@ -174,7 +174,9 @@ void SpaceshipMovementDrawer(int departureStationCoordX, int departureStationCoo
             }  
         }
     }
-    //маршрут Вега - Земля - работает хорошо
+    
+    //Внештатные ситуации. Движение корабля по этим маршрутам происходит по диагонали
+    //маршрут Вега - Земля
     if(departureStationCoordX == 128 && departureStationCoordY == 12 && arrivalStationCoordX == 25 && arrivalStationCoordY == 57)
     {
         //пока координаты не совпадут
@@ -189,7 +191,6 @@ void SpaceshipMovementDrawer(int departureStationCoordX, int departureStationCoo
             Sleep(50);
         }
     }
-    //FIXME:
     //маршрут Земля - Вега
     if(departureStationCoordX == 25 && departureStationCoordY == 57 && arrivalStationCoordX == 128 && arrivalStationCoordY == 12)
     {
@@ -209,6 +210,7 @@ void SpaceshipMovementDrawer(int departureStationCoordX, int departureStationCoo
         printf("*");
     }
     //Альдебаран - Сириус
+    //FIXME:
     if(departureStationCoordX == 25 && departureStationCoordY == 12 && arrivalStationCoordX == 128 && arrivalStationCoordY == 57)
     {
         //пока координаты не совпадут
@@ -231,7 +233,6 @@ void SpaceshipMovementDrawer(int departureStationCoordX, int departureStationCoo
     //Сириус - Альдебаран
     else 
     {
-        //FIXME:
         //пока координаты не совпадут
         while(departureStationCoordX != arrivalStationCoordX && departureStationCoordY != arrivalStationCoordY)
         {
@@ -249,10 +250,11 @@ void SpaceshipMovementDrawer(int departureStationCoordX, int departureStationCoo
     }     
 }
 
-//FIXME: возврат на станцию отправления. 
+//функция, отвечающая за отрисовку логики передвижения кораблей. В ней вызывается функция перемещения, пока маршрут не будет завершён
 void SpaceshipMovementLogic(int *shipRoute, int departureStationNumber)
 {
-    int currentStation[2] = {0,0}; ;
+    //координаты станции, на которой корабль находится в данный момент
+    int currentStation[2] = {0,0};
     currentStation[0] = StationCOORD[departureStationNumber][0]; //X
     currentStation[1] = StationCOORD[departureStationNumber][1]; //Y 
     int i=0;
@@ -264,7 +266,7 @@ void SpaceshipMovementLogic(int *shipRoute, int departureStationNumber)
         {
             //вызываем функцию перелёта из станции по текущим координатам на станцию прибытия
             SpaceshipMovementDrawer(currentStation[0], currentStation[1], StationCOORD[i][0], StationCOORD[i][1]);
-            //идентифицируем, откуда приехали
+          /*  //идентифицируем, откуда приехали
             char *departureStationName; //указатель на строку с названием станции
             departureStationName = (char*)malloc(15); //выделение памяти под хранение этой строки
             switch(departureStationNumber)
@@ -281,7 +283,7 @@ void SpaceshipMovementLogic(int *shipRoute, int departureStationNumber)
                 case 3:
                 departureStationName = "Sirius";
                 break;
-            }
+            } */
             //массив с прибывшими на станции пассажирами с других станций
             ArrivedPassengers[i] += shipRoute[i];
             //выводим надпись о прибывших пассажирах
@@ -301,23 +303,28 @@ void SpaceshipMovementLogic(int *shipRoute, int departureStationNumber)
                 printf("Arrived: %d", ArrivedPassengers[i]);
             }
             shipRoute[i] -= ArrivedPassengers[i]; //высаживаем пассажиров на станции
-            passengerAmount -= ArrivedPassengers[i];
+            passengerAmount -= ArrivedPassengers[i]; //число неразвезённых пассажиров уменьшается
+            
+            //отладка
             GoToXY(190,46);
             printf("Dep station coodrs: %d %d", currentStation[0], currentStation[1]);
+            
             //меняем новые координаты отправления
             currentStation[0] = StationCOORD[i][0];
             currentStation[1] = StationCOORD[i][1];
+            
+            //отладка
             //записываем координаты станции, на которую нужно попасть
             GoToXY(190,45);
             printf("Arrival station coodrs: %d %d", StationCOORD[i][0], StationCOORD[i][1]);
             GoToXY(190,48);
             printf("New dep station coodrs: %d %d", currentStation[0], currentStation[1]);
-            GoToXY(190,50+i);
+            GoToXY(190,60+departureStationNumber);
             printf("Passengers left: %d", passengerAmount);
         }
         i++;      
     }
-    //флексим
+    /*//флексим
     int newCurrentStation;
     if (currentStation[0] == 25)
     {
@@ -328,7 +335,7 @@ void SpaceshipMovementLogic(int *shipRoute, int departureStationNumber)
     {
         if(currentStation[1] == 12) newCurrentStation = 1;
         else newCurrentStation = 3;
-    }
+    }*/
     //с этой строчкой кораблик будет постоянно летать по станциям, но в какой-то момент программа крашнется
     //Spaceship(newCurrentStation, departureStationNumber);
     //возврат обратно в станцию отправления
@@ -339,6 +346,7 @@ int Spaceship(int currentStation, int originalStation)
 {
     int seats = 4;
     int passengers=0;
+    int success = 0;
     //логика точно такая же, как и у станций, только здесь вместо станций - корабли.
     //т.е. корабль, у него 4 места. Каждая ячейка отвечает за свою станцию, содержимое ячейки - на количество пассажиров В КОРАБЛЕ, желающих поехать на эту станцию
     int shipWorkload[4] = {0,0,0,0}; //загруженность салона корабля
@@ -375,9 +383,10 @@ int Spaceship(int currentStation, int originalStation)
             }
         }
     }
+
     //отладка
-    GoToXY(190, 70);
-    printf("Amount of pass on the ship: %d", passengers);
+    //GoToXY(190, 70);
+    //printf("Amount of pass on the ship: %d", passengers);
     /*for(int c=0; c<4; c++)
     {
         GoToXY(190, 60+c);
@@ -387,8 +396,9 @@ int Spaceship(int currentStation, int originalStation)
     //полетели
     int *shipRoute = shipWorkload;
     SpaceshipMovementLogic(shipRoute, currentStation);
+    success = 1;
 
-    //отладка
+    //отладка 
     /*for(int v=0; v<4; v++)
     {
         GoToXY(190,75+v);
@@ -396,22 +406,22 @@ int Spaceship(int currentStation, int originalStation)
     } */
     //если развезли всех пассажиров со станции, и больше никто никуда ехать не хочет - корабль возвращается в доки своей станции
     //SpaceshipMovementDrawer(StationCOORD[currentStation][0], StationCOORD[currentStation][1], StationCOORD[originalStation][0], StationCOORD[originalStation][1]);
-    return 1;
+    return success;
 }
 
 
-//SFA здесь генерируется верно
 //Логические функции
 //функция генерации пассажиров на станциях + распределение пассажиров по направлениям полётов
 void Passengers(int X, int Y, int departureStationNumber, int y)
 {
+    //общее количество пассажиров на конкретной станции
     int passengersOnStation = 0;
     char *departureStationName; //указатель на строку с названием станции, с которой совершается отлёт
     departureStationName = (char*)malloc(15); //выделение памяти под хранение этой строки
     switch(departureStationNumber) //в зависимости от номера станции отправления
     {
         case 0:
-        departureStationName = "Aldebaran";
+        departureStationName = "Aldebaran"; //присваиваем название станции пришедшему в функцию номеру станции
         break;
         case 1:
         departureStationName = "Vega";
@@ -427,8 +437,6 @@ void Passengers(int X, int Y, int departureStationNumber, int y)
         break;
     }
 
-    //общее количество пассажиров на станции 
-    //int passengerAmount = 0;
     //делим пассажиров по станциям
     for(int j=0; j<4; j++)
     {
@@ -475,17 +483,25 @@ void Passengers(int X, int Y, int departureStationNumber, int y)
     printf("From %s to Sirius: %d", departureStationName, StationFlightsApp[departureStationNumber][3]);
 }
 
-void SpaceshipsCalling(int station)
+//функция, вызывающая функцию старта корабля в зависимости от того, остались ли ещё неразвезённые пассажиры
+DWORD SpaceshipsCalling(LPVOID station)
 {
-    int success = Spaceship(station, station);
+    //отладка
+    printf("Number: %d", *(DWORD*)station);
+    
+    int success = Spaceship(*(DWORD*)station, *(DWORD*)station);
+    //если первый вызванный корабль развёз своих пассажиров
     if(success == 1)
     {
+        //если пассажиры на станциях всё ещё остались
         while(passengerAmount != 0)
         {
+            //вызываем корабль с рандомной станции
             int st = Random_number_generator(0,3);
             Spaceship(st,st);
         }
-    }
+    } 
+    return 0;
 }
     
 
@@ -520,24 +536,15 @@ void Planetary_stations()
     Passengers(133,54,3,28); //генерируем пассажиров
     Spaceships_drawer(128,57); //рисуем корабль
 
-    SpaceshipsCalling(0);
-
-    //проверка на то, остались ли ещё неразвезённые пассажиры
- /*   int k=0;
-    for(int i=0; i<4; i++)
-    {
-        for(int j=0; j<4; j++)
-        {
-            if(StationFlightsApp[i][j] != 0) k++;
-        }
-    }
-    if(k != 0) 
-    {
-        while(k > 0)
-        {
-            SpaceshipsCalling(0);
-        }
-    } */
+    //генерация нитей с кораблями
+    DWORD param0 = 0, param1 = 1, param2 = 2, param3 = 3;
+    hship0=CreateThread(NULL, 0, SpaceshipsCalling, &param0, 0, &shipThreadID0);
+    hship1=CreateThread(NULL, 0, SpaceshipsCalling, &param1, 0, &shipThreadID1);
+    hship2=CreateThread(NULL, 0, SpaceshipsCalling, &param2, 0, &shipThreadID2);
+    hship3=CreateThread(NULL, 0, SpaceshipsCalling, &param3, 0, &shipThreadID3);
+    
+    //первичный вызов корабля
+    //SpaceshipsCalling(0);
 } 
 
 void main()
