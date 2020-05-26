@@ -303,14 +303,15 @@ int SpaceshipMovementLogic(int departureStationNumber, int shipNumber)
     printf("                     ");
     GoToXY(57,40);
     printf("Seats free: %d", freeSeats[shipNumber]);
-    Sleep(2000); 
+    //Sleep(2000); 
 
     if(passengerAmount > 0)
     {
-        while(i<4)
-        {
+       // while(i<4)
+        //{
            // if(shipRoute[shipNumber][i] > 0) 
             //{
+                i = Random_number_generator(0,3);
                 SpaceshipMovementDrawer(currentStation[0], currentStation[1], StationCOORD[i][0], StationCOORD[i][1]); //летим
                         
                     //прилетели на новую станцию
@@ -337,19 +338,19 @@ int SpaceshipMovementLogic(int departureStationNumber, int shipNumber)
                     printf("                     ");
                     GoToXY(57,38);
                     printf("Passengers left: %d", passengerAmount);
-                    Sleep(100);
+                    //Sleep(100);
 
                     GoToXY(57,42);
                     printf("                     ");
                     GoToXY(57,42);
                     printf("Dropped off. Seats free: %d", freeSeats[shipNumber]);
-                    Sleep(2000); 
+                    //Sleep(2000); 
 
                     GoToXY(57,44);
                     printf("                     ");
                     GoToXY(57,44);
                     printf("New pass in. Seats free: %d", freeSeats[shipNumber]);
-                    Sleep(2000); 
+                   // Sleep(2000); 
 
                     //меняем новые координаты отправления
                     currentStation[0] = StationCOORD[i][0];
@@ -391,8 +392,8 @@ int SpaceshipMovementLogic(int departureStationNumber, int shipNumber)
                         }
                     }
             //}
-            i++;
-        }
+           // i++;
+        //}
     }
     int currSt = currentStationNumber;
 }
@@ -423,6 +424,7 @@ DWORD Spaceship(LPVOID station)
     TheEnd(); 
     return 0;
 }
+
 //Логические функции
 //функция генерации пассажиров на станциях + распределение пассажиров по направлениям полётов
 void Passengers(int X, int Y, int departureStationNumber, int y)
@@ -460,7 +462,7 @@ void Passengers(int X, int Y, int departureStationNumber, int y)
         }
         else 
         {
-            int passengers = Random_number_generator(1,3); //генерируем рандомное кол-во пассажиров, которые куда-то поедут
+            int passengers = Random_number_generator(2,12); //генерируем рандомное кол-во пассажиров, которые куда-то поедут
             StationFlightsApp[departureStationNumber][j] = passengers; //записываем этих пассажиров как желающих поехать на станцию j
             passengerAmount += passengers; //считаем общее кол-во пассажиров
             passengersOnStation += passengers; //считаем общее кол-во пассажиров на станции
@@ -537,7 +539,7 @@ void main()
 
     //генерация нитей с кораблями
     DWORD shipNumber[4] = {0,1,2,3};
-    for(int j=0; j<1; j++)
+    for(int j=0; j<4; j++)
     {
         hship[j] = CreateThread(NULL, 0, Spaceship, &shipNumber[j], 0, &shipThreadID[j]);
     } 
