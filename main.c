@@ -309,8 +309,8 @@ int SpaceshipMovementLogic(int departureStationNumber, int shipNumber)
     {
         while(i<4)
         {
-            if(shipRoute[shipNumber][i] > 0) 
-            {
+           // if(shipRoute[shipNumber][i] > 0) 
+            //{
                 SpaceshipMovementDrawer(currentStation[0], currentStation[1], StationCOORD[i][0], StationCOORD[i][1]); //летим
                         
                     //прилетели на новую станцию
@@ -390,7 +390,7 @@ int SpaceshipMovementLogic(int departureStationNumber, int shipNumber)
                             }
                         }
                     }
-            }
+            //}
             i++;
         }
     }
