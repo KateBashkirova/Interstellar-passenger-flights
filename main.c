@@ -15,13 +15,15 @@ int StationFlightsApp[4][4] = {{0,0,0,0}, {0,0,0,0}, {0,0,0,0}, {0,0,0,0}};
 int StationCOORD[4][2] = {{16,12}, {38,12}, {16,30}, {38,30}};
 //Общее кол-во пассажиров на всех станциях
 int passengerAmount = 0;
-//на каких станциях чейчас есть корабль
-int shipsAtStations[4] = {1,1,1,1};
+//курс движения каждого из кораблей
+int shipRoute[4][4] = {{0,0,0,0}, {0,0,0,0}, {0,0,0,0}, {0,0,0,0}};
+//свободные места в каждом из кораблей
+int freeSeats[4] = {4,4,4,4};
 
 //хэндлы
 HANDLE hship[4]; //корабли
 DWORD shipThreadID[4]; //id кораблей
-HANDLE hSem,hMtx,hSemSt;
+HANDLE hSem[4],hMtx,hSemSt;
 
 HANDLE hWrMtxSt[4]; //хэндлы станций на запись
 HANDLE hReadMtxSt[4]; //хэндлы станций на чтение
@@ -104,7 +106,6 @@ void SpaceshipMovementDrawer(int departureStationCoordX, int departureStationCoo
     char *bodyDeliter = " ";
     char *bay = "B";
 
-    WaitForSingleObject(hSem, INFINITE); //захватываем семафор на отрисовку (письмо по сути) движения кораблей
     //далее идёт проверка условий для перемещения корабля по пространству
     //если станции находятся на одном уровне по Y
     if(departureStationCoordY == arrivalStationCoordY)
@@ -251,90 +252,19 @@ void SpaceshipMovementDrawer(int departureStationCoordX, int departureStationCoo
     }
     GoToXY(arrivalStationCoordX, arrivalStationCoordY);
     printf("%s", bay); 
-    ReleaseSemaphore(hSem, 1, NULL); //освобождаем семафор на отрисовку    
 }
 
-//функция, отвечающая за отрисовку логики передвижения кораблей. В ней вызывается функция перемещения, пока маршрут не будет завершён
-void SpaceshipMovementLogic(int *shipRoute, int departureStationNumber)
+void CreateRoute(int departureStationNumber, int shipNumber)
 {
-    //координаты станции, на которой корабль находится в данный момент
-    int currentStation[2] = {0,0};
-    currentStation[0] = StationCOORD[departureStationNumber][0]; //X
-    currentStation[1] = StationCOORD[departureStationNumber][1]; //Y 
-    int i=0;
-    //обрабатываем пришедший массив с курсом движения корабля
-    while(i<4)
-    {
-        //если на направлении есть пассажиры в корабле
-        if(shipRoute[i] > 0)
-        {
-            //вызываем функцию перелёта из станции по текущим координатам на станцию прибытия
-            SpaceshipMovementDrawer(currentStation[0], currentStation[1], StationCOORD[i][0], StationCOORD[i][1]);
-            
-            WaitForSingleObject(hMtx, INFINITE); //говорим потокам притормозить пока
-		    N++; //записываем, сколько потоков обратилось 
-		    if (N==1) //если хотя бы 1 процесс что-то хочет
-		    {
-			    WaitForSingleObject(hSem, INFINITE); //пытаемся захватит семафор
-		    }
-            ReleaseMutex(hMtx); //получилось - освобождаем мьютекс
-
-            //мутим всякий флекс
-            shipsAtStations[i] += 1; //прилетели на станцию - там появился корабль
-            ArrivedPassengers[i] += shipRoute[i];
-            passengerAmount -= shipRoute[i];
-            shipRoute[i] -= ArrivedPassengers[i]; //высаживаем пассажиров на станции
-            //выводим надпись о прибывших пассажирах
-            if(StationCOORD[i][0] == 16) //условие для корректного отображения для станций Альдебаран и Земля
-            {
-                GoToXY(StationCOORD[i][0]-16, StationCOORD[i][1]+7);
-                printf("Arr: %d", ArrivedPassengers[i]);
-            }
-            else
-            {
-                GoToXY(StationCOORD[i][0]+3, StationCOORD[i][1]+7);
-                printf("Arr: %d", ArrivedPassengers[i]);
-            }
-            //отладка
-            GoToXY(57,38);
-            printf("                     ");
-            GoToXY(57,38);
-            printf("Passengers left: %d", passengerAmount);
-            //меняем новые координаты отправления
-            currentStation[0] = StationCOORD[i][0];
-            currentStation[1] = StationCOORD[i][1];
-
-            WaitForSingleObject(hMtx, INFINITE); //говорим потоку снова притормозить
-            N--; //доделал - из списка читающих выбывает
-		    if (N==0) //если никто больше ничего не хочет
-		    {
-			    ReleaseSemaphore(hSem, 1, NULL); //освобождаем семафор - можно снова рисовать передвижение кораблей
-		    }
-		    ReleaseMutex(hMtx); 
-        }
-        i++;      
-    }
-}
-
-int Spaceship(int currentStation, int originalStation)
-{
-    if(passengerAmount > 0);
-    int seats = 4;
-    int passengers=0;
-    int success = 0;
-    //логика точно такая же, как и у станций, только здесь вместо станций - корабли.
-    //т.е. корабль, у него 4 места. Каждая ячейка отвечает за свою станцию, содержимое ячейки - на количество пассажиров В КОРАБЛЕ, желающих поехать на эту станцию
-    int shipWorkload[4] = {0,0,0,0}; //загруженность салона корабля
     int i=0, k=0;
     //ищет, хочет ли кто-то полететь с текущей станции хоть куда-нибудь
     for(i=0; i<4; i++)
     {
-        //если ещё не всех пассажиров развезли - этот цикл нужен для самого последнего развоза
-        if(StationFlightsApp[currentStation][i] != 0)
+        //проверяет, есть ли хоть 1 пассажир на направление i
+        if(StationFlightsApp[departureStationNumber][i] != 0)
         {
-            //проверяем, остались ли места в салоне. If вместо while для тех моментов, когда, например, остался всего 1 пассажир. Он займёт 1 место, 3 останется, но корабль должен полететь, 
-            //потому что никого больше нет
-            if(seats > 0)
+            //проверяем, остались ли места в салоне
+            if(freeSeats[shipNumber] != 0)
             {
                 //следующий цикл реализует следующее: поскольку на 1 направление может быть несколько пассажиров (в т.ч. 4 и более) мы усаживаем в корабль столько человек, сколько хотело
                 //на это направление, но не больше 4-х за раз. Если их было 2 - садим сразу 2-х, если 1 - садим 1 и смотрим следующие направления. Этот цикл реализован, чтобы корабль полностью 
@@ -344,30 +274,155 @@ int Spaceship(int currentStation, int originalStation)
                 for(int j=0; j<4; j++)
                 {
                     //если пассажиры на данное направление не закончились
-                    if(StationFlightsApp[currentStation][i] != 0)
+                    if(StationFlightsApp[departureStationNumber][i] != 0)
                     {
-                        if(seats != 0)
+                        if(freeSeats[shipNumber] != 0)
                         {
-                            passengers += (StationFlightsApp[currentStation][i]/StationFlightsApp[currentStation][i]); //садим РОВНО 1 пассажира
-                            seats -= 1; //пассажиры занимают места
-                            StationFlightsApp[currentStation][i] -= (StationFlightsApp[currentStation][i]/StationFlightsApp[currentStation][i]); //севшие на корабль пассажиры больше не считаются пассажирами, ожидающими перелёт
-                            shipWorkload[i] += (StationFlightsApp[currentStation][i]/StationFlightsApp[currentStation][i]); //записываем, что этот пассажир сел в корабль на направление i
+                            freeSeats[shipNumber] -= (StationFlightsApp[departureStationNumber][i]/StationFlightsApp[departureStationNumber][i]); //пассажиры занимают места
+                            StationFlightsApp[departureStationNumber][i] -= (StationFlightsApp[departureStationNumber][i]/StationFlightsApp[departureStationNumber][i]); //севшие на корабль пассажиры больше не считаются пассажирами, ожидающими перелёт
+                            shipRoute[shipNumber][i] += (StationFlightsApp[departureStationNumber][i]/StationFlightsApp[departureStationNumber][i]); //заполняем маршрут корабля
                         }
                     } 
                 }
             }
         }
     }
-    //полетели
-    int *shipRoute = shipWorkload;
-    SpaceshipMovementLogic(shipRoute, currentStation);
-    success = 1;
-    //если развезли всех пассажиров со станции, и больше никто никуда ехать не хочет - корабль возвращается в доки своей станции
-    //SpaceshipMovementDrawer(StationCOORD[currentStation][0], StationCOORD[currentStation][1], StationCOORD[originalStation][0], StationCOORD[originalStation][1]);
-    return success;
 }
 
+//функция, отвечающая за отрисовку логики передвижения кораблей. В ней вызывается функция перемещения, пока маршрут не будет завершён
+int SpaceshipMovementLogic(int departureStationNumber, int shipNumber)
+{
+    //координаты станции, на которой корабль находится в данный момент
+    int currentStation[2] = {0,0};
+    currentStation[0] = StationCOORD[departureStationNumber][0]; //X
+    currentStation[1] = StationCOORD[departureStationNumber][1]; //Y 
+    int i=0;
+    int currentStationNumber;
 
+    GoToXY(57,40);
+    printf("                     ");
+    GoToXY(57,40);
+    printf("Seats free: %d", freeSeats[shipNumber]);
+    Sleep(2000); 
+
+    if(passengerAmount > 0)
+    {
+        while(i<4)
+        {
+            if(shipRoute[shipNumber][i] > 0) 
+            {
+                SpaceshipMovementDrawer(currentStation[0], currentStation[1], StationCOORD[i][0], StationCOORD[i][1]); //летим
+                        
+                    //прилетели на новую станцию
+                        
+                    ArrivedPassengers[i] += shipRoute[shipNumber][i]; //прибавляем новых пассажиров к кол-ву прибывших на станцию
+                    freeSeats[shipNumber] += shipRoute[shipNumber][i]; //кол-во свободных мест увеличивается на число высадившихся пассажиров
+                    passengerAmount -= shipRoute[shipNumber][i]; //от общего числа неразвезённых пассажиров отнимаем тех, кто уже прилетел, куда хотел
+                    shipRoute[shipNumber][i] -= shipRoute[shipNumber][i]; //высаживаем пассажиров на станции
+
+                    //выводим надпись о прибывших пассажирах
+                    if(StationCOORD[i][0] == 16) //условие для корректного отображения для станций Альдебаран и Земля
+                    {
+                        GoToXY(StationCOORD[i][0]-16, StationCOORD[i][1]+7);
+                        printf("Arr: %d", ArrivedPassengers[i]);
+                    }
+                    else
+                    {
+                        GoToXY(StationCOORD[i][0]+3, StationCOORD[i][1]+7);
+                        printf("Arr: %d", ArrivedPassengers[i]);
+                    }
+
+                    //отладка
+                    GoToXY(57,38);
+                    printf("                     ");
+                    GoToXY(57,38);
+                    printf("Passengers left: %d", passengerAmount);
+                    Sleep(100);
+
+                    GoToXY(57,42);
+                    printf("                     ");
+                    GoToXY(57,42);
+                    printf("Dropped off. Seats free: %d", freeSeats[shipNumber]);
+                    Sleep(2000); 
+
+                    GoToXY(57,44);
+                    printf("                     ");
+                    GoToXY(57,44);
+                    printf("New pass in. Seats free: %d", freeSeats[shipNumber]);
+                    Sleep(2000); 
+
+                    //меняем новые координаты отправления
+                    currentStation[0] = StationCOORD[i][0];
+                    currentStation[1] = StationCOORD[i][1];
+
+                    //идентифицируем, куда прилетели
+                    switch(currentStation[0]) //глядим по Х переменной
+                    {
+                        //если станция прибытия имеет координату Х = 16
+                        case 16:
+                        //если её координата Y == 12 - это Альдебаран (ст. 0)
+                        if(currentStation[1] == 12) currentStationNumber = 0;
+                        //если координата Y == 30 - это Земля (ст. 2)
+                        if(currentStation[1] == 30) currentStationNumber = 2;
+                        break;
+                        //если станция прибытия имеет координату Х = 38
+                        case 38:
+                        //если её координата Y == 12 - это Вега (ст. 1)
+                        if(currentStation[1] == 12) currentStationNumber = 1;
+                        //если координата Y == 30 - это Сириус (ст. 3)
+                        if(currentStation[1] == 30) currentStationNumber = 3;
+                        break;
+                    }
+
+                    //если на корабле появились свободные места
+                    if(freeSeats[shipNumber] > 0)
+                    {
+                        for(int k=0; k<4; k++)
+                        {
+                            if(freeSeats[shipNumber] > 0)
+                            {
+                                if(StationFlightsApp[currentStationNumber][k] != 0)
+                                {
+                                    shipRoute[shipNumber][k] += (StationFlightsApp[currentStationNumber][k]/StationFlightsApp[currentStationNumber][k]);
+                                    StationFlightsApp[currentStationNumber][k] -= (StationFlightsApp[currentStationNumber][k]/StationFlightsApp[currentStationNumber][k]);
+                                    freeSeats[shipNumber] -= (StationFlightsApp[currentStationNumber][k]/StationFlightsApp[currentStationNumber][k]);
+                                }
+                            }
+                        }
+                    }
+            }
+            i++;
+        }
+    }
+    int currSt = currentStationNumber;
+}
+
+void TheEnd()
+{
+    GoToXY(10,22);
+    printf("All passengers have been transported!");
+    Sleep(15000);
+    //exit(0);
+}
+
+DWORD Spaceship(LPVOID station)
+{
+    //вызываем функцию формирования маршрута
+    CreateRoute(*(DWORD*)station, *(DWORD*)station);
+
+    int success = 5;
+    success = SpaceshipMovementLogic(*(DWORD*)station, *(DWORD*)station);
+
+    if(success != 5)
+    {
+        while(passengerAmount != 0)
+        {
+            success = SpaceshipMovementLogic(success, *(DWORD*)station);
+        }  
+    }
+    TheEnd(); 
+    return 0;
+}
 //Логические функции
 //функция генерации пассажиров на станциях + распределение пассажиров по направлениям полётов
 void Passengers(int X, int Y, int departureStationNumber, int y)
@@ -405,7 +460,7 @@ void Passengers(int X, int Y, int departureStationNumber, int y)
         }
         else 
         {
-            int passengers = Random_number_generator(2,4); //генерируем рандомное кол-во пассажиров, которые куда-то поедут
+            int passengers = Random_number_generator(1,3); //генерируем рандомное кол-во пассажиров, которые куда-то поедут
             StationFlightsApp[departureStationNumber][j] = passengers; //записываем этих пассажиров как желающих поехать на станцию j
             passengerAmount += passengers; //считаем общее кол-во пассажиров
             passengersOnStation += passengers; //считаем общее кол-во пассажиров на станции
@@ -433,40 +488,6 @@ void Passengers(int X, int Y, int departureStationNumber, int y)
     printf("From %s to The Earth: %d", departureStationName, StationFlightsApp[departureStationNumber][2]);
     GoToXY(57,y+3);
     printf("From %s to Sirius: %d", departureStationName, StationFlightsApp[departureStationNumber][3]);
-}
-
-void TheEnd()
-{
-    GoToXY(10,22);
-    printf("All passengers have been transported!");
-    Sleep(15000);
-    //exit(0);
-}
-
-//функция, вызывающая функцию старта корабля в зависимости от того, остались ли ещё неразвезённые пассажиры
-DWORD SpaceshipsCalling(LPVOID station)
-{   
-    int success = Spaceship(*(DWORD*)station, *(DWORD*)station);
-    //если первый вызванный корабль развёз своих пассажиров
-    if(success == 1)
-    {
-        //если пассажиры на станциях всё ещё остались
-        while(passengerAmount > 0)
-        {
-            int randomStation=Random_number_generator(0,3);
-            //если на этой станции есть корабль
-            //if(shipsAtStations[randomStation] != 0)
-            //{
-                //его можно отправить в путь
-                Spaceship(randomStation,randomStation);
-            //}
-            Sleep(100);
-        } 
-        GoToXY(57, 40);
-        printf("Check out: %d", success);
-    }
-    TheEnd();
-    return 0;
 }
     
 void Planetary_stations()
@@ -504,15 +525,21 @@ void main()
 {
     system("cls");
     Planetary_stations();
-    hSem = CreateSemaphore(NULL, 1, 1, "writing");//создание семафора
+    //hSem = CreateSemaphore(NULL, 1, 1, "writing");//создание семафора
     hMtx = CreateMutex(NULL, FALSE, NULL); //создаём мьютекс для записи
-
+    
+    for(int i=0; i<4; i++)
+    {
+        hWrMtxSt[i] = CreateMutex(NULL, FALSE, NULL); 
+        //hReadMtxSt[i] = CreateMutex(NULL, FALSE, NULL); 
+        hSem[i] = CreateSemaphore(NULL, 1, 1, "writing");//создание семафора
+    }
 
     //генерация нитей с кораблями
     DWORD shipNumber[4] = {0,1,2,3};
-    for(int j=0; j<4; j++)
+    for(int j=0; j<1; j++)
     {
-        hship[j] = CreateThread(NULL, 0, SpaceshipsCalling, &shipNumber[j], 0, &shipThreadID[j]);
+        hship[j] = CreateThread(NULL, 0, Spaceship, &shipNumber[j], 0, &shipThreadID[j]);
     } 
     getchar();
 }
