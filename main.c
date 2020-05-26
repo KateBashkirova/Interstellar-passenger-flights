@@ -17,13 +17,15 @@ int StationCOORD[4][2] = {{16,12}, {38,12}, {16,30}, {38,30}};
 int passengerAmount = 0;
 //на каких станциях чейчас есть корабль
 int shipsAtStations[4] = {1,1,1,1};
-//летит ли кто-то на станции
-int flyingOnStations[4] = {0,0,0,0};
 
 //хэндлы
-HANDLE hship[4];
-DWORD shipThreadID[4]; //id нитей
+HANDLE hship[4]; //корабли
+DWORD shipThreadID[4]; //id кораблей
 HANDLE hSem,hMtx,hSemSt;
+
+HANDLE hWrMtxSt[4]; //хэндлы станций на запись
+HANDLE hReadMtxSt[4]; //хэндлы станций на чтение
+
 int N;
 CRITICAL_SECTION csec;
 
@@ -88,7 +90,7 @@ void Planetary_stations_drawer(int X, int Y)
 //функция начальной отрисовки кораблей в доках своих станций
 void Spaceships_drawer(int X, int Y)
 {
-    char *body = "S";
+    char *body = "B";
     //если нужно нарисовать кораблик
     GoToXY(X,Y);
     printf("%s", body);      
@@ -100,7 +102,9 @@ void SpaceshipMovementDrawer(int departureStationCoordX, int departureStationCoo
     //тело корабля
     char *body = "*";
     char *bodyDeliter = " ";
+    char *bay = "B";
 
+    WaitForSingleObject(hSem, INFINITE); //захватываем семафор на отрисовку (письмо по сути) движения кораблей
     //далее идёт проверка условий для перемещения корабля по пространству
     //если станции находятся на одном уровне по Y
     if(departureStationCoordY == arrivalStationCoordY)
@@ -124,6 +128,9 @@ void SpaceshipMovementDrawer(int departureStationCoordX, int departureStationCoo
                 Sleep(80);
             }  
         }
+        GoToXY(arrivalStationCoordX, arrivalStationCoordY);
+        printf("%s", bay);
+
         //если станция отбытия правее станции прибытия
         if(departureStationCoordX > arrivalStationCoordX)
         {
@@ -138,6 +145,8 @@ void SpaceshipMovementDrawer(int departureStationCoordX, int departureStationCoo
                 Sleep(80);
             }  
         }
+        GoToXY(arrivalStationCoordX, arrivalStationCoordY);
+        printf("%s", bay);
     } 
     
     //если станции находятся на одном уровне по Х
@@ -156,7 +165,7 @@ void SpaceshipMovementDrawer(int departureStationCoordX, int departureStationCoo
                 printf("%s", body);
                 Sleep(80);
             }
-        } 
+        }
         //если станция отбытия ниже станции прибытия
         else
         {
@@ -171,6 +180,8 @@ void SpaceshipMovementDrawer(int departureStationCoordX, int departureStationCoo
                 Sleep(80);
             }  
         }
+        GoToXY(arrivalStationCoordX, arrivalStationCoordY);
+        printf("%s", bay);
     }
     
     //Внештатные ситуации. Движение корабля по этим маршрутам происходит по диагонали
@@ -189,6 +200,8 @@ void SpaceshipMovementDrawer(int departureStationCoordX, int departureStationCoo
             Sleep(100);
         }
     }
+    GoToXY(arrivalStationCoordX, arrivalStationCoordY);
+    printf("%s", bay);
     //маршрут Земля - Вега
     if(departureStationCoordX == 16 && departureStationCoordY == 30 && arrivalStationCoordX == 38 && arrivalStationCoordY == 12)
     {
@@ -204,8 +217,9 @@ void SpaceshipMovementDrawer(int departureStationCoordX, int departureStationCoo
             Sleep(100);
         }
     }
+    GoToXY(arrivalStationCoordX, arrivalStationCoordY);
+    printf("%s", bay);
     //Альдебаран - Сириус
-    //FIXME:
     if(departureStationCoordX == 16 && departureStationCoordY == 12 && arrivalStationCoordX == 38 && arrivalStationCoordY == 30)
     {
         //пока координаты не совпадут
@@ -234,7 +248,10 @@ void SpaceshipMovementDrawer(int departureStationCoordX, int departureStationCoo
             printf("%s", body);
             Sleep(100);
         }
-    }     
+    }
+    GoToXY(arrivalStationCoordX, arrivalStationCoordY);
+    printf("%s", bay); 
+    ReleaseSemaphore(hSem, 1, NULL); //освобождаем семафор на отрисовку    
 }
 
 //функция, отвечающая за отрисовку логики передвижения кораблей. В ней вызывается функция перемещения, пока маршрут не будет завершён
@@ -253,8 +270,16 @@ void SpaceshipMovementLogic(int *shipRoute, int departureStationNumber)
         {
             //вызываем функцию перелёта из станции по текущим координатам на станцию прибытия
             SpaceshipMovementDrawer(currentStation[0], currentStation[1], StationCOORD[i][0], StationCOORD[i][1]);
-            if(shipsAtStations[departureStationNumber] == 1) shipsAtStations[departureStationNumber] = 0;
-            else shipsAtStations[departureStationNumber] -= 1;
+            
+            WaitForSingleObject(hMtx, INFINITE); //говорим потокам притормозить пока
+		    N++; //записываем, сколько потоков обратилось 
+		    if (N==1) //если хотя бы 1 процесс что-то хочет
+		    {
+			    WaitForSingleObject(hSem, INFINITE); //пытаемся захватит семафор
+		    }
+            ReleaseMutex(hMtx); //получилось - освобождаем мьютекс
+
+            //мутим всякий флекс
             shipsAtStations[i] += 1; //прилетели на станцию - там появился корабль
             ArrivedPassengers[i] += shipRoute[i];
             passengerAmount -= shipRoute[i];
@@ -275,15 +300,20 @@ void SpaceshipMovementLogic(int *shipRoute, int departureStationNumber)
             printf("                     ");
             GoToXY(57,38);
             printf("Passengers left: %d", passengerAmount);
-            
             //меняем новые координаты отправления
             currentStation[0] = StationCOORD[i][0];
             currentStation[1] = StationCOORD[i][1];
+
+            WaitForSingleObject(hMtx, INFINITE); //говорим потоку снова притормозить
+            N--; //доделал - из списка читающих выбывает
+		    if (N==0) //если никто больше ничего не хочет
+		    {
+			    ReleaseSemaphore(hSem, 1, NULL); //освобождаем семафор - можно снова рисовать передвижение кораблей
+		    }
+		    ReleaseMutex(hMtx); 
         }
         i++;      
     }
-    //возврат обратно в станцию отправления
-    //SpaceshipMovementDrawer(currentStation[0], currentStation[1], StationCOORD[departureStationNumber][0], StationCOORD[departureStationNumber][1]);
 }
 
 int Spaceship(int currentStation, int originalStation)
@@ -333,7 +363,7 @@ int Spaceship(int currentStation, int originalStation)
     SpaceshipMovementLogic(shipRoute, currentStation);
     success = 1;
     //если развезли всех пассажиров со станции, и больше никто никуда ехать не хочет - корабль возвращается в доки своей станции
-    SpaceshipMovementDrawer(StationCOORD[currentStation][0], StationCOORD[currentStation][1], StationCOORD[originalStation][0], StationCOORD[originalStation][1]);
+    //SpaceshipMovementDrawer(StationCOORD[currentStation][0], StationCOORD[currentStation][1], StationCOORD[originalStation][0], StationCOORD[originalStation][1]);
     return success;
 }
 
@@ -475,7 +505,6 @@ void main()
     system("cls");
     Planetary_stations();
     hSem = CreateSemaphore(NULL, 1, 1, "writing");//создание семафора
-    hSemSt = CreateSemaphore(NULL, 1, 1, "writing");//создание семафора
     hMtx = CreateMutex(NULL, FALSE, NULL); //создаём мьютекс для записи
 
 
