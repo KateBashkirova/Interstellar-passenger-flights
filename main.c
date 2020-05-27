@@ -261,15 +261,17 @@ void CreateRoute(int departureStationNumber, int shipNumber)
 {
     int i=0, k=0;
     //ищет, хочет ли кто-то полететь с текущей станции хоть куда-нибудь
+    WaitForSingleObject(hReadMtxSt[shipNumber], INFINITE);
     for(i=0; i<4; i++)
     {
-        WaitForSingleObject(hReadMtxSt[shipNumber], INFINITE);
+       // WaitForSingleObject(hReadMtxSt[shipNumber], INFINITE);
         //проверяет, есть ли хоть 1 пассажир на направление i
-        N++;
-		if(N==1){
-			WaitForSingleObject(hWrSem[shipNumber], INFINITE); 
-		}
-        ReleaseMutex(hReadMtxSt[shipNumber]);//особождение мьютекса
+       // N++;
+		//if(N==1)
+       // {
+		///	WaitForSingleObject(hWrSem[shipNumber], INFINITE); 
+		//}
+        //ReleaseMutex(hReadMtxSt[shipNumber]);//особождение мьютекса
         if(StationFlightsApp[departureStationNumber][i] != 0)
         {
             //проверяем, остались ли места в салоне
@@ -278,7 +280,7 @@ void CreateRoute(int departureStationNumber, int shipNumber)
                 //следующий цикл реализует следующее: поскольку на 1 направление может быть несколько пассажиров (в т.ч. 4 и более) мы усаживаем в корабль столько человек, сколько хотело
                 //на это направление, но не больше 4-х за раз. Если их было 2 - садим сразу 2-х, если 1 - садим 1 и смотрим следующие направления. Этот цикл реализован, чтобы корабль полностью 
                 //использовал свой потенциал и "по максимуму" нагружал в себя пассажиров
-
+                
                 //поскольку на 1 направление может быть несколько человек
                 for(int j=0; j<4; j++)
                 {
@@ -295,14 +297,15 @@ void CreateRoute(int departureStationNumber, int shipNumber)
                 }
             }
         }
-        WaitForSingleObject(hReadMtxSt[shipNumber], INFINITE);//ожидание сигнала мьютекса
-		N--;
-		if(N==0){
-			ReleaseSemaphore(hWrSem[shipNumber], 1, NULL);//освобождение семафора
-		}
-		ReleaseMutex(hReadMtxSt[shipNumber]);//освобождения мьютекса
-		Sleep(305);
+     //   WaitForSingleObject(hReadMtxSt[shipNumber], INFINITE);//ожидание сигнала мьютекса
+	//	N--;
+	//	if(N==0){
+		//	ReleaseSemaphore(hWrSem[shipNumber], 1, NULL);//освобождение семафора
+	//	}
+		//ReleaseMutex(hReadMtxSt[shipNumber]);//освобождения мьютекса
+		//Sleep(305);
     }
+    ReleaseMutex(hReadMtxSt[shipNumber]);
 }
 
 //функция, отвечающая за отрисовку логики передвижения кораблей. В ней вызывается функция перемещения, пока маршрут не будет завершён
@@ -321,11 +324,14 @@ int SpaceshipMovementLogic(int departureStationNumber, int shipNumber)
                 SpaceshipMovementDrawer(currentStation[0], currentStation[1], StationCOORD[i][0], StationCOORD[i][1]); //летим
                         
                     //прилетели на новую станцию
-                        
+                    WaitForSingleObject(hReadMtxSt[shipNumber], INFINITE);
+
                     ArrivedPassengers[i] += shipRoute[shipNumber][i]; //прибавляем новых пассажиров к кол-ву прибывших на станцию
                     freeSeats[shipNumber] += shipRoute[shipNumber][i]; //кол-во свободных мест увеличивается на число высадившихся пассажиров
                     passengerAmount -= shipRoute[shipNumber][i]; //от общего числа неразвезённых пассажиров отнимаем тех, кто уже прилетел, куда хотел
                     shipRoute[shipNumber][i] -= shipRoute[shipNumber][i]; //высаживаем пассажиров на станции
+
+                  //  ReleaseMutex(hReadMtxSt[shipNumber]);//освобождения мьютекса
 
                     //выводим надпись о прибывших пассажирах
                     if(StationCOORD[i][0] == 16) //условие для корректного отображения для станций Альдебаран и Земля
@@ -344,13 +350,13 @@ int SpaceshipMovementLogic(int departureStationNumber, int shipNumber)
                     printf("                     ");
                     GoToXY(57,38);
                     printf("Passengers left: %d", passengerAmount);
-                    //Sleep(100);
+                    //Sleep(100); 
 
-                    GoToXY(57,42);
+                   /* GoToXY(57,42);
                     printf("                     ");
                     GoToXY(57,42);
                     printf("Dropped off. Seats free: %d", freeSeats[shipNumber]);
-                    //Sleep(2000); 
+                    //Sleep(2000); */
 
                     GoToXY(57,44);
                     printf("                     ");
@@ -389,31 +395,33 @@ int SpaceshipMovementLogic(int departureStationNumber, int shipNumber)
                             if(freeSeats[shipNumber] > 0)
                             {
                                 WaitForSingleObject(hReadMtxSt[shipNumber], INFINITE);
-                                N++;
-		                        if(N==1)
-                                {
-			                        WaitForSingleObject(hWrSem[shipNumber], INFINITE); 
-		                        }
-                                ReleaseMutex(hReadMtxSt[shipNumber]);//особождение мьютекса
+                              //  N++;
+		                        //if(N==1)
+                               // {
+			                       // WaitForSingleObject(hWrSem[shipNumber], INFINITE); 
+		                      //  }
+                             //   ReleaseMutex(hReadMtxSt[shipNumber]);//особождение мьютекса
                                 if(StationFlightsApp[currentStationNumber][k] != 0)
                                 {
                                     shipRoute[shipNumber][k] += (StationFlightsApp[currentStationNumber][k]/StationFlightsApp[currentStationNumber][k]);
                                     StationFlightsApp[currentStationNumber][k] -= (StationFlightsApp[currentStationNumber][k]/StationFlightsApp[currentStationNumber][k]);
                                     freeSeats[shipNumber] -= (StationFlightsApp[currentStationNumber][k]/StationFlightsApp[currentStationNumber][k]);
                                 }
-                                WaitForSingleObject(hReadMtxSt[shipNumber], INFINITE);//ожидание сигнала мьютекса
-		                        N--;
-		                        if(N==0)
-                                {
-			                        ReleaseSemaphore(hWrSem[shipNumber], 1, NULL);//освобождение семафора
-		                        }   
-		                        ReleaseMutex(hReadMtxSt[shipNumber]);//освобождения мьютекса
-		                        Sleep(305);
+                                //WaitForSingleObject(hReadMtxSt[shipNumber], INFINITE);//ожидание сигнала мьютекса
+		                        //N--;
+		                       // if(N==0)
+                               // {
+			                     //   ReleaseSemaphore(hWrSem[shipNumber], 1, NULL);//освобождение семафора
+		                      //  }   
+		                       
+		                      //  Sleep(305);
                             }
                         }
                     }
     }
+    ReleaseMutex(hReadMtxSt[shipNumber]);//освобождения мьютекса
     int currSt = currentStationNumber;
+    return currSt;
 }
 
 void TheEnd()
@@ -449,7 +457,7 @@ DWORD CreatePassengers(LPVOID station)
     char *departureStationName; //указатель на строку с названием станции, с которой совершается отлёт
     departureStationName = (char*)malloc(15); //выделение памяти под хранение этой строки
     //делим пассажиров по станциям
-    WaitForSingleObject(hWrSem[*(DWORD*)station], INFINITE); //захватываем семафор на запись значения пассажиров на этой станции station
+   // WaitForSingleObject(hWrSem[*(DWORD*)station], INFINITE); //захватываем семафор на запись значения пассажиров на этой станции station
     for(int j=0; j<4; j++)
     {
         //если заполняется колонка пассажиров для станции, на которой эти пассажиры находятся в данный момент
@@ -459,7 +467,7 @@ DWORD CreatePassengers(LPVOID station)
         }
         else 
         {
-            int passengers = Random_number_generator(2,12); //генерируем рандомное кол-во пассажиров, которые куда-то поедут
+            int passengers = Random_number_generator(1,2); //генерируем рандомное кол-во пассажиров, которые куда-то поедут
             StationFlightsApp[*(DWORD*)station][j] = passengers; //записываем этих пассажиров как желающих поехать на станцию j
             passengerAmount += passengers; //считаем общее кол-во пассажиров
             passengersOnStation += passengers; //считаем общее кол-во пассажиров на станции
@@ -493,13 +501,13 @@ DWORD CreatePassengers(LPVOID station)
         printf("|");
     }
     //выводим информацию о перелётах в окошко
-    WaitForSingleObject(hWrMtxSt[*(DWORD*)station], INFINITE);
+   /* WaitForSingleObject(hWrMtxSt[*(DWORD*)station], INFINITE);
     K++;
 	if(K>1)
     {
 		WaitForSingleObject(hSem1, INFINITE); //захватываем семафор на запись информации в окошко информации
 	}
-    ReleaseMutex(hWrMtxSt[*(DWORD*)station]); //особождение мьютекса
+    ReleaseMutex(hWrMtxSt[*(DWORD*)station]); //особождение мьютекса */
     GoToXY(57,4);
     printf("Interstellar flights information");
     int y=6+*(DWORD*)station; int multiplier=*(DWORD*)station; 
@@ -513,16 +521,16 @@ DWORD CreatePassengers(LPVOID station)
     printf("From %s to Sirius: %d", departureStationName, StationFlightsApp[*(DWORD*)station][3]);
     GoToXY(85,y+(multiplier*4));
     printf("Total: %d", passengersOnStation);
-    WaitForSingleObject(hWrMtxSt[*(DWORD*)station], INFINITE);//ожидание сигнала мьютекса
+    /*WaitForSingleObject(hWrMtxSt[*(DWORD*)station], INFINITE);//ожидание сигнала мьютекса
     K--;
 	if(K<=1)
     {
 		ReleaseSemaphore(hSem1, 1, NULL); //освобождаем семафор на запись информации в окошко информации
 	}   
-	ReleaseMutex(hWrMtxSt[*(DWORD*)station]);//освобождения мьютекса
+	ReleaseMutex(hWrMtxSt[*(DWORD*)station]);//освобождения мьютекса */
     //FIXME: если убрать - будет косяк
-    Sleep(305);
-    ReleaseSemaphore(hWrSem[*(DWORD*)station], 1, NULL); //освобождение семафора на запись значения пассажиров на станции station
+    //Sleep(305);
+    //ReleaseSemaphore(hWrSem[*(DWORD*)station], 1, NULL); //освобождение семафора на запись значения пассажиров на станции station 
 }
     
 void Planetary_stations()
@@ -571,8 +579,10 @@ void main()
     for(int k=0; k<4; k++)
     {
         hPassengersOnStations[k] = CreateThread(NULL, 0, CreatePassengers, &stationNumber[k], 0, &passengersOnStationsID[k]);
+        Sleep(15);
     }
-    //генерация нитей с кораблями
+
+   //генерация нитей с кораблями
     DWORD shipNumber[4] = {0,1,2,3};
     for(int j=0; j<4; j++)
     {
