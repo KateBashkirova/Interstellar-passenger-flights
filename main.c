@@ -8,7 +8,7 @@
 int ArrivedPassengers[4] = {0,0,0,0};
 
 //массив, использующийся при генерации заявок на полёты. Номер ячейки = номеру станции, для которой происходит генерация заявок. 
-//Далее - номер станции, на которую полетят пассажиры. Значение ячейки = количество пассажиров, которые полетят с одной станции на другую.
+//Далее - номер станции, на которую полетят пассажиры. Значение ячейки = количеству пассажиров, которые полетят с одной станции на другую.
 int StationFlightsApp[4][4] = {{0,0,0,0}, {0,0,0,0}, {0,0,0,0}, {0,0,0,0}};
 
 //координаты доков каждой станции
@@ -29,10 +29,10 @@ DWORD  shipThreadID[4]; //id кораблей
 HANDLE hPassengersOnStations[4]; //хэндлы пассажиров
 DWORD  passengersOnStationsID[4]; //id пассажиров
 
-HANDLE hMtxSt[4]; //хэндлы станций на чтение
+HANDLE hMtxSt[4]; //хэндлы для работы с информацией о пассажирах на каждой станции
 
 
-//Функция, отвечающая за перемещение курсора по экрану и вовода текста в нужное место
+//Функция, отвечающая за перемещение курсора по экрану и вывода текста в нужное место
 void GoToXY(const int X,const int Y)
 {
     HANDLE OutPutHandle;
@@ -44,14 +44,14 @@ void GoToXY(const int X,const int Y)
     SetConsoleCursorPosition(OutPutHandle,ScreenBufInfo.dwCursorPosition);
 }
 
-//функция генерации случайного числа в заданном диапазоне значений
+//Функция генерации случайного числа в заданном диапазоне значений
 int RandomNumberGenerator(int min, int max)
 {
     LARGE_INTEGER tt;
     QueryPerformanceCounter(&tt);
     srand(tt.LowPart); 
     double fraction = 1.0 / ((double)(RAND_MAX) + 1.0); 
-    // Равномерно распределяем рандомное число в диапазоне min/max
+    //равномерно распределяем рандомное число в диапазоне min/max
     int randomNumber = (int)(rand() * fraction * (max - min + 1) + min);
     return randomNumber;
 }
@@ -239,17 +239,17 @@ void SpaceshipMovementDrawer(int departureStationCoordX, int departureStationCoo
 void CreateRoute(int departureStationNumber, int shipNumber)
 {
     int i=0, k=0;
-    WaitForSingleObject(hMtxSt[shipNumber], INFINITE); //захватываем мьютекс на чтение информации
+    WaitForSingleObject(hMtxSt[shipNumber], INFINITE); //захватываем мьютекс для работы с информацией о пассажирах на станции
     //для 4-х возможных направлений
     for(i=0; i<4; i++)
     {
         //если на текущей станции есть хоть один человек, желающий полететь на направление i
         if(StationFlightsApp[departureStationNumber][i] != 0)
         {
-            //проверяем, остались ли места в корабля
+            //проверяем, остались ли места в корабле
             if(freeSeats[shipNumber] != 0)
             {                
-                //поскольку на 1 направление может быть несколько человек максимально нагружаем корабль
+                //поскольку на 1 направление может быть несколько человек, максимально нагружаем корабль
                 for(int j=0; j<4; j++)
                 {
                     //если пассажиры на данное направление не закончились
@@ -262,7 +262,7 @@ void CreateRoute(int departureStationNumber, int shipNumber)
                             freeSeats[shipNumber] -= (StationFlightsApp[departureStationNumber][i]/StationFlightsApp[departureStationNumber][i]); 
                             //севшие на корабль пассажиры больше не считаются пассажирами, ожидающими перелёт
                             StationFlightsApp[departureStationNumber][i] -= (StationFlightsApp[departureStationNumber][i]/StationFlightsApp[departureStationNumber][i]); 
-                            //заполняем маршрут корабля в соответствие с заявками севших в салон пассажиров
+                            //заполняем маршрут корабля в соответствии с заявками севших в салон пассажиров
                             shipRoute[shipNumber][i] += (StationFlightsApp[departureStationNumber][i]/StationFlightsApp[departureStationNumber][i]); 
                         }
                     } 
@@ -273,7 +273,7 @@ void CreateRoute(int departureStationNumber, int shipNumber)
     ReleaseMutex(hMtxSt[shipNumber]); //освобождаем мьютекс 
 }
 
-//Функция, отвечающая за логику передвижения кораблей и изменения их маршрутов в соответсвие с садящимися на борт пассажирами
+//Функция, отвечающая за логику передвижения кораблей и изменения их маршрутов в соответствии с садящимися на борт пассажирами
 int SpaceshipMovementLogic(int departureStationNumber, int shipNumber)
 {
     //координаты станции, на которой корабль находится в данный момент
@@ -289,10 +289,10 @@ int SpaceshipMovementLogic(int departureStationNumber, int shipNumber)
         i = RandomNumberGenerator(0,3); //выбирается случайная станция, на которую полетит корабль
         SpaceshipMovementDrawer(currentStation[0], currentStation[1], StationCOORD[i][0], StationCOORD[i][1]); //корабль летит на эту станцию
                         
-        //по прибытию на новую станцию
-        WaitForSingleObject(hMtxSt[shipNumber], INFINITE); //захватываем мьютекс на работу с информацией на этой станции
+        //по прибытии на новую станцию
+        WaitForSingleObject(hMtxSt[shipNumber], INFINITE); //захватываем мьютекс для работы с информацией о пассажирах на станции
         ArrivedPassengers[i] += shipRoute[shipNumber][i]; //прибавляем новых пассажиров к кол-ву прибывших на станцию
-        freeSeats[shipNumber] += shipRoute[shipNumber][i]; //кол-во свободных мест в корабле увеличивается на число высадившихся пассажиров
+        freeSeats[shipNumber] += shipRoute[shipNumber][i]; //кол-во свободных мест на корабле увеличивается на число высадившихся пассажиров
         passengerAmount -= shipRoute[shipNumber][i]; //от общего числа неразвезённых пассажиров отнимаем тех, кто уже прилетел, куда хотел
         shipRoute[shipNumber][i] -= shipRoute[shipNumber][i]; //высаживаем пассажиров на станции
 
@@ -307,12 +307,6 @@ int SpaceshipMovementLogic(int departureStationNumber, int shipNumber)
             GoToXY(StationCOORD[i][0]+3, StationCOORD[i][1]+7);
             printf("Arr: %d", ArrivedPassengers[i]);
         }
-
-        //выводим информацию о том, сколько ещё осталось неразвезённых пассажиров
-        GoToXY(57,38);
-        printf("                     ");
-        GoToXY(57,38);
-        printf("Passengers left: %d", passengerAmount);
                    
         //устанавливаем новые координаты отправления (поскольку теперь корабль отправляется с новой станции, а не со своей начальной)
         currentStation[0] = StationCOORD[i][0];
@@ -342,11 +336,11 @@ int SpaceshipMovementLogic(int departureStationNumber, int shipNumber)
         {
             for(int k=0; k<4; k++) //для 4-х возможных направлений
             {
-                if(freeSeats[shipNumber] > 0)
+                if(freeSeats[shipNumber] > 0) //если всё ещё не все места заняты
                 {
                     if(StationFlightsApp[currentStationNumber][k] != 0) //если на текущей станции есть хоть 1 пассажир на направление i
                     {
-                        //добавляем этого пассажира в текущий маршрут корабля
+                        //добавляем заявку этого пассажира в текущий маршрут корабля
                         shipRoute[shipNumber][k] += (StationFlightsApp[currentStationNumber][k]/StationFlightsApp[currentStationNumber][k]);
                         //севший на корабль пассажир больше не считается пассажиром, ожидающим перелёт
                         StationFlightsApp[currentStationNumber][k] -= (StationFlightsApp[currentStationNumber][k]/StationFlightsApp[currentStationNumber][k]);
@@ -397,14 +391,14 @@ DWORD CreatePassengers(LPVOID station)
     //генерируем количество пассажиров и заявки на полёты
     for(int j=0; j<4; j++) //для всех 4-х направлений
     {
-        //если заполняется ячейка, отвечающая за заявки на перелёт на ту станцию, на которой эти пассажиры находятся в данный момент
+        //если заполняется ячейка, отвечающая за заявки на перелёт на ту станцию, на которой пассажиры находятся в данный момент
         if(j==*(DWORD*)station) 
         {
-            StationFlightsApp[*(DWORD*)station][j] = 0; //ячейка приравнивается 0, т.к. пассажиры не могут полететь на ту же станцию, на которой уже находятся
+            StationFlightsApp[*(DWORD*)station][j] = 0; //значение ячейки приравнивается к 0, т.к. пассажиры не могут полететь на ту станцию, на которой уже находятся
         }
         else 
         {
-            int passengers = RandomNumberGenerator(2,12); //генерируем случайное кол-во пассажиров, которые куда-то полетят
+            int passengers = RandomNumberGenerator(2,10); //генерируем случайное кол-во пассажиров, которые куда-то полетят
             StationFlightsApp[*(DWORD*)station][j] = passengers; //записываем этих пассажиров как желающих полететь на станцию j
             passengerAmount += passengers; //считаем общее кол-во пассажиров, подавших заявки
             passengersOnStation += passengers; //считаем кол-во пассажиров, подавших заявки конкретно с этой станции
@@ -430,8 +424,8 @@ DWORD CreatePassengers(LPVOID station)
         break;
     }
     //выводим общее количество пассажиров, подавших заявки на перелёт
-    GoToXY(57,37);
-    printf("Passenger amount: %d", passengerAmount);
+    GoToXY(57,30);
+    printf("Total passenger amount: %d", passengerAmount);
 
     //просто линия для очерчивания окна
     for(int i=0; i<40; i++)
@@ -452,7 +446,7 @@ DWORD CreatePassengers(LPVOID station)
     GoToXY(57,y+4+(multiplier*4));
     printf("From %s to Sirius: %d", departureStationName, StationFlightsApp[*(DWORD*)station][3]);
     GoToXY(85,y+(multiplier*4));
-    printf("Total: %d", passengersOnStation);
+    printf("Total: %d", passengersOnStation); //общее кол-во заявок на перелёты с данной станции
 }
 
 //Функция, отвечающая за формирование начального состояния мира
