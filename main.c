@@ -22,13 +22,16 @@ int freeSeats[4] = {4,4,4,4};
 
 //хэндлы
 HANDLE hship[4]; //корабли
-DWORD shipThreadID[4]; //id кораблей
-HANDLE hSem[4],hMtx,hSemSt;
+DWORD  shipThreadID[4]; //id кораблей
+HANDLE hWrSem[4],hMtx,hSemSt;
+HANDLE hPassengersOnStations[4]; //пассажиры
+DWORD  passengersOnStationsID[4];
+HANDLE hSem1, hSem2;
 
 HANDLE hWrMtxSt[4]; //хэндлы станций на запись
 HANDLE hReadMtxSt[4]; //хэндлы станций на чтение
 
-int N;
+int N; int K;
 CRITICAL_SECTION csec;
 
 //Добавочные функции
@@ -260,7 +263,13 @@ void CreateRoute(int departureStationNumber, int shipNumber)
     //ищет, хочет ли кто-то полететь с текущей станции хоть куда-нибудь
     for(i=0; i<4; i++)
     {
+        WaitForSingleObject(hReadMtxSt[shipNumber], INFINITE);
         //проверяет, есть ли хоть 1 пассажир на направление i
+        N++;
+		if(N==1){
+			WaitForSingleObject(hWrSem[shipNumber], INFINITE); 
+		}
+        ReleaseMutex(hReadMtxSt[shipNumber]);//особождение мьютекса
         if(StationFlightsApp[departureStationNumber][i] != 0)
         {
             //проверяем, остались ли места в салоне
@@ -286,6 +295,13 @@ void CreateRoute(int departureStationNumber, int shipNumber)
                 }
             }
         }
+        WaitForSingleObject(hReadMtxSt[shipNumber], INFINITE);//ожидание сигнала мьютекса
+		N--;
+		if(N==0){
+			ReleaseSemaphore(hWrSem[shipNumber], 1, NULL);//освобождение семафора
+		}
+		ReleaseMutex(hReadMtxSt[shipNumber]);//освобождения мьютекса
+		Sleep(305);
     }
 }
 
@@ -299,18 +315,8 @@ int SpaceshipMovementLogic(int departureStationNumber, int shipNumber)
     int i=0;
     int currentStationNumber;
 
-    GoToXY(57,40);
-    printf("                     ");
-    GoToXY(57,40);
-    printf("Seats free: %d", freeSeats[shipNumber]);
-    //Sleep(2000); 
-
     if(passengerAmount > 0)
     {
-       // while(i<4)
-        //{
-           // if(shipRoute[shipNumber][i] > 0) 
-            //{
                 i = Random_number_generator(0,3);
                 SpaceshipMovementDrawer(currentStation[0], currentStation[1], StationCOORD[i][0], StationCOORD[i][1]); //летим
                         
@@ -382,18 +388,30 @@ int SpaceshipMovementLogic(int departureStationNumber, int shipNumber)
                         {
                             if(freeSeats[shipNumber] > 0)
                             {
+                                WaitForSingleObject(hReadMtxSt[shipNumber], INFINITE);
+                                N++;
+		                        if(N==1)
+                                {
+			                        WaitForSingleObject(hWrSem[shipNumber], INFINITE); 
+		                        }
+                                ReleaseMutex(hReadMtxSt[shipNumber]);//особождение мьютекса
                                 if(StationFlightsApp[currentStationNumber][k] != 0)
                                 {
                                     shipRoute[shipNumber][k] += (StationFlightsApp[currentStationNumber][k]/StationFlightsApp[currentStationNumber][k]);
                                     StationFlightsApp[currentStationNumber][k] -= (StationFlightsApp[currentStationNumber][k]/StationFlightsApp[currentStationNumber][k]);
                                     freeSeats[shipNumber] -= (StationFlightsApp[currentStationNumber][k]/StationFlightsApp[currentStationNumber][k]);
                                 }
+                                WaitForSingleObject(hReadMtxSt[shipNumber], INFINITE);//ожидание сигнала мьютекса
+		                        N--;
+		                        if(N==0)
+                                {
+			                        ReleaseSemaphore(hWrSem[shipNumber], 1, NULL);//освобождение семафора
+		                        }   
+		                        ReleaseMutex(hReadMtxSt[shipNumber]);//освобождения мьютекса
+		                        Sleep(305);
                             }
                         }
                     }
-            //}
-           // i++;
-        //}
     }
     int currSt = currentStationNumber;
 }
@@ -425,15 +443,29 @@ DWORD Spaceship(LPVOID station)
     return 0;
 }
 
-//Логические функции
-//функция генерации пассажиров на станциях + распределение пассажиров по направлениям полётов
-void Passengers(int X, int Y, int departureStationNumber, int y)
+DWORD CreatePassengers(LPVOID station)
 {
-    //общее количество пассажиров на конкретной станции
     int passengersOnStation = 0;
     char *departureStationName; //указатель на строку с названием станции, с которой совершается отлёт
     departureStationName = (char*)malloc(15); //выделение памяти под хранение этой строки
-    switch(departureStationNumber) //в зависимости от номера станции отправления
+    //делим пассажиров по станциям
+    WaitForSingleObject(hWrSem[*(DWORD*)station], INFINITE); //захватываем семафор на запись значения пассажиров на этой станции station
+    for(int j=0; j<4; j++)
+    {
+        //если заполняется колонка пассажиров для станции, на которой эти пассажиры находятся в данный момент
+        if(j==*(DWORD*)station) 
+        {
+            StationFlightsApp[*(DWORD*)station][j] = 0; //пассажиры не могут поехать на ту же станцию, на которой уже находятся
+        }
+        else 
+        {
+            int passengers = Random_number_generator(2,12); //генерируем рандомное кол-во пассажиров, которые куда-то поедут
+            StationFlightsApp[*(DWORD*)station][j] = passengers; //записываем этих пассажиров как желающих поехать на станцию j
+            passengerAmount += passengers; //считаем общее кол-во пассажиров
+            passengersOnStation += passengers; //считаем общее кол-во пассажиров на станции
+        }
+    }
+    switch(*(DWORD*)station) //в зависимости от номера станции отправления
     {
         case 0:
         departureStationName = "Aldebaran"; //присваиваем название станции пришедшему в функцию номеру станции
@@ -451,25 +483,6 @@ void Passengers(int X, int Y, int departureStationNumber, int y)
         departureStationName = "Error";
         break;
     }
-
-    //делим пассажиров по станциям
-    for(int j=0; j<4; j++)
-    {
-        //если заполняется колонка пассажиров для станции, на которой эти пассажиры находятся в данный момент
-        if(j==departureStationNumber) 
-        {
-            StationFlightsApp[departureStationNumber][j] = 0; //пассажиры не могут поехать на ту же станцию, на которой уже находятся
-        }
-        else 
-        {
-            int passengers = Random_number_generator(2,12); //генерируем рандомное кол-во пассажиров, которые куда-то поедут
-            StationFlightsApp[departureStationNumber][j] = passengers; //записываем этих пассажиров как желающих поехать на станцию j
-            passengerAmount += passengers; //считаем общее кол-во пассажиров
-            passengersOnStation += passengers; //считаем общее кол-во пассажиров на станции
-        }
-        GoToXY(X,Y);
-        printf("app: %d", passengersOnStation); //выводим общее кол-во пассажиров на станции в окошко станции
-    }
     GoToXY(57,37);
     printf("Passenger amount: %d", passengerAmount);
 
@@ -480,16 +493,36 @@ void Passengers(int X, int Y, int departureStationNumber, int y)
         printf("|");
     }
     //выводим информацию о перелётах в окошко
+    WaitForSingleObject(hWrMtxSt[*(DWORD*)station], INFINITE);
+    K++;
+	if(K>1)
+    {
+		WaitForSingleObject(hSem1, INFINITE); //захватываем семафор на запись информации в окошко информации
+	}
+    ReleaseMutex(hWrMtxSt[*(DWORD*)station]); //особождение мьютекса
     GoToXY(57,4);
     printf("Interstellar flights information");
-    GoToXY(57,y);
-    printf("From %s to Aldebaran: %d", departureStationName, StationFlightsApp[departureStationNumber][0]);
-    GoToXY(57,y+1);
-    printf("From %s to Vega: %d", departureStationName, StationFlightsApp[departureStationNumber][1]);
-    GoToXY(57,y+2);
-    printf("From %s to The Earth: %d", departureStationName, StationFlightsApp[departureStationNumber][2]);
-    GoToXY(57,y+3);
-    printf("From %s to Sirius: %d", departureStationName, StationFlightsApp[departureStationNumber][3]);
+    int y=6+*(DWORD*)station; int multiplier=*(DWORD*)station; 
+    GoToXY(57,y+1+(multiplier*4));
+    printf("From %s to Aldebaran: %d", departureStationName, StationFlightsApp[*(DWORD*)station][0]);
+    GoToXY(57,y+2+(multiplier*4));
+    printf("From %s to Vega: %d", departureStationName, StationFlightsApp[*(DWORD*)station][1]);
+    GoToXY(57,y+3+(multiplier*4));
+    printf("From %s to The Earth: %d", departureStationName, StationFlightsApp[*(DWORD*)station][2]);
+    GoToXY(57,y+4+(multiplier*4));
+    printf("From %s to Sirius: %d", departureStationName, StationFlightsApp[*(DWORD*)station][3]);
+    GoToXY(85,y+(multiplier*4));
+    printf("Total: %d", passengersOnStation);
+    WaitForSingleObject(hWrMtxSt[*(DWORD*)station], INFINITE);//ожидание сигнала мьютекса
+    K--;
+	if(K<=1)
+    {
+		ReleaseSemaphore(hSem1, 1, NULL); //освобождаем семафор на запись информации в окошко информации
+	}   
+	ReleaseMutex(hWrMtxSt[*(DWORD*)station]);//освобождения мьютекса
+    //FIXME: если убрать - будет косяк
+    Sleep(305);
+    ReleaseSemaphore(hWrSem[*(DWORD*)station], 1, NULL); //освобождение семафора на запись значения пассажиров на станции station
 }
     
 void Planetary_stations()
@@ -498,28 +531,24 @@ void Planetary_stations()
     GoToXY(5,5); //передвигаем курсор в нужное место
     printf("Aldebaran"); //название станции
     Planetary_stations_drawer(5,8); //рисуем станцию
-    Passengers(7,9,0,7); //генерируем пассажиров
     Spaceships_drawer(16,12); //рисуем корабль
 
     //Станция "Вега"
     GoToXY(40,5); //передвигаем курсор в нужное место
     printf("Vega"); //название станции
     Planetary_stations_drawer(40,8); //рисуем станцию
-    Passengers(42,9,1,14); //генерируем пассажиров
     Spaceships_drawer(38,12); //рисуем корабль
 
     //Станция "Земля"
     GoToXY(5,25); //передвигаем курсор в нужное место
     printf("The Earth"); //название станции
     Planetary_stations_drawer(5,28); //рисуем станцию
-    Passengers(7,29,2,21); //генерируем пассажиров
     Spaceships_drawer(16,30); //рисуем корабль
 
     //Станция "Сириус"
     GoToXY(40,25); //передвигаем курсор в нужное место
     printf("Sirius"); //название станции
     Planetary_stations_drawer(40,28); //рисуем станцию
-    Passengers(42,29,3,28); //генерируем пассажиров
     Spaceships_drawer(38,30); //рисуем корабль
 } 
 
@@ -527,16 +556,22 @@ void main()
 {
     system("cls");
     Planetary_stations();
-    //hSem = CreateSemaphore(NULL, 1, 1, "writing");//создание семафора
+    hSem1 = CreateSemaphore(NULL, 1, 1, "writing");//создание семафора
+    hSem2 = CreateSemaphore(NULL, 1, 1, "writing");//создание семафора
     hMtx = CreateMutex(NULL, FALSE, NULL); //создаём мьютекс для записи
     
     for(int i=0; i<4; i++)
     {
         hWrMtxSt[i] = CreateMutex(NULL, FALSE, NULL); 
-        //hReadMtxSt[i] = CreateMutex(NULL, FALSE, NULL); 
-        hSem[i] = CreateSemaphore(NULL, 1, 1, "writing");//создание семафора
+        hReadMtxSt[i] = CreateMutex(NULL, FALSE, NULL); 
+        hWrSem[i] = CreateSemaphore(NULL, 1, 1, "writing");//создание семафора
     }
 
+    DWORD stationNumber[4] = {0,1,2,3};
+    for(int k=0; k<4; k++)
+    {
+        hPassengersOnStations[k] = CreateThread(NULL, 0, CreatePassengers, &stationNumber[k], 0, &passengersOnStationsID[k]);
+    }
     //генерация нитей с кораблями
     DWORD shipNumber[4] = {0,1,2,3};
     for(int j=0; j<4; j++)
