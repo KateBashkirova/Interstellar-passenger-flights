@@ -14,7 +14,7 @@ int StationFlightsApp[4][4] = {{0,0,0,0}, {0,0,0,0}, {0,0,0,0}, {0,0,0,0}};
 //координаты доков каждой станции
 int StationCOORD[4][2] = {{16,12}, {38,12}, {16,30}, {38,30}};
 
-//Общее кол-во пассажиров на всех станциях
+//общее кол-во пассажиров на всех станциях
 int passengerAmount = 0;
 
 //курс движения каждого из кораблей
@@ -24,15 +24,15 @@ int shipRoute[4][4] = {{0,0,0,0}, {0,0,0,0}, {0,0,0,0}, {0,0,0,0}};
 int freeSeats[4] = {4,4,4,4};
 
 //хэндлы
-HANDLE hship[4]; //хэндлы корабли
+HANDLE hship[4]; //хэндлы кораблей
 DWORD  shipThreadID[4]; //id кораблей
 HANDLE hPassengersOnStations[4]; //хэндлы пассажиров
 DWORD  passengersOnStationsID[4]; //id пассажиров
 
-HANDLE hMtxSt[4]; //хэндлы для работы с информацией о пассажирах на каждой станции
+HANDLE hMtxSt[4]; //хэндлы мьютексов для работы с информацией о пассажирах на каждой станции
 
 
-//Функция, отвечающая за перемещение курсора по экрану и вывода текста в нужное место
+//Функция, отвечающая за перемещение курсора по экрану в нужное место
 void GoToXY(const int X,const int Y)
 {
     HANDLE OutPutHandle;
@@ -51,7 +51,7 @@ int RandomNumberGenerator(int min, int max)
     QueryPerformanceCounter(&tt);
     srand(tt.LowPart); 
     double fraction = 1.0 / ((double)(RAND_MAX) + 1.0); 
-    //равномерно распределяем рандомное число в диапазоне min/max
+    //равномерно распределяем случайное число в диапазоне min/max
     int randomNumber = (int)(rand() * fraction * (max - min + 1) + min);
     return randomNumber;
 }
@@ -246,7 +246,7 @@ void CreateRoute(int departureStationNumber, int shipNumber)
         //если на текущей станции есть хоть один человек, желающий полететь на направление i
         if(StationFlightsApp[departureStationNumber][i] != 0)
         {
-            //проверяем, остались ли места в корабле
+            //проверяем, остались ли места на корабле
             if(freeSeats[shipNumber] != 0)
             {                
                 //поскольку на 1 направление может быть несколько человек, максимально нагружаем корабль
@@ -273,7 +273,7 @@ void CreateRoute(int departureStationNumber, int shipNumber)
     ReleaseMutex(hMtxSt[shipNumber]); //освобождаем мьютекс 
 }
 
-//Функция, отвечающая за логику передвижения кораблей и изменения их маршрутов в соответствии с садящимися на борт пассажирами
+//Функция, отвечающая за логику передвижения кораблей и изменение их маршрутов в соответствии с садящимися на борт пассажирами
 int SpaceshipMovementLogic(int departureStationNumber, int shipNumber)
 {
     //координаты станции, на которой корабль находится в данный момент
@@ -351,7 +351,7 @@ int SpaceshipMovementLogic(int departureStationNumber, int shipNumber)
             }
         }
     }
-    ReleaseMutex(hMtxSt[shipNumber]); //освобождения мьютекса
+    ReleaseMutex(hMtxSt[shipNumber]); //освобождение мьютекса
     int currSt = currentStationNumber; //номер станции, на которой находится корабль (на которую он прилетел)
     return currSt; 
 }
@@ -377,7 +377,6 @@ DWORD Spaceship(LPVOID station)
     //когда все пассажиры будут развезены
     GoToXY(10,22);
     printf("All passengers have been transported!"); //сообщить об этом
-    Sleep(15000);
     return 0;
 }
 
