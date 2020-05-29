@@ -28,7 +28,6 @@ HANDLE hship[4]; //хэндлы кораблей
 DWORD  shipThreadID[4]; //id кораблей
 HANDLE hPassengersOnStations[4]; //хэндлы пассажиров
 DWORD  passengersOnStationsID[4]; //id пассажиров
-
 HANDLE hMtxSt[4]; //хэндлы мьютексов для работы с информацией о пассажирах на каждой станции
 
 
